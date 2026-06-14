@@ -1,0 +1,14 @@
+{
+  "name": "kh-skills",
+  "displayName": "KH Skills",
+  "version": "0.6.0",
+  "description": "KH's shared skill bundle \u2014 same skills on every machine, a bridge to Gary, and the Shared Brain that keeps Cowork/Code/Gary in sync.",
+  "author": {
+    "name": "KH"
+  },
+  "keywords": [
+    "kh",
+    "skills",
+    "internal"
+  ]
+}

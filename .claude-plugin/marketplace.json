@@ -1,0 +1,13 @@
+{
+  "name": "kh-marketplace",
+  "owner": {
+    "name": "KH"
+  },
+  "plugins": [
+    {
+      "name": "kh-skills",
+      "source": "./plugins/kh-skills",
+      "description": "KH's shared skill bundle. Add new skills here and every device (server, PC, laptop) stays in sync via one install."
+    }
+  ]
+}
