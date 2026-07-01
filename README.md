@@ -108,5 +108,10 @@ The new skill appears in the `/` menu, namespaced as
 | Pull latest skills | `/plugin marketplace update kh-marketplace` |
 | Remove the bundle | `/plugin uninstall kh-skills` |
 
-Skills currently in the bundle: **ask-gary, brain, llm-council, resume** (plus the `_template-skill`
-starter, which you can ignore or delete).
+Skills currently in the bundle: **ask-gary, brain, buildertrend, llm-council, resume**
+(plus the `_template-skill` starter, which you can ignore or delete).
+
+**buildertrend** runs KH jobs Buildertrend-style — schedules, daily logs,
+change orders, selections & allowances, budgets/draws, punch lists, warranty —
+as plain files in the vault's `Jobs/` folder, and doubles as a research
+briefing on Buildertrend the product (features, pricing, competitors).

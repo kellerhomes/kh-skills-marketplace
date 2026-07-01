@@ -1,8 +1,8 @@
 {
   "name": "kh-skills",
   "displayName": "KH Skills",
-  "version": "0.6.0",
-  "description": "KH's shared skill bundle \u2014 same skills on every machine, a bridge to Gary, and the Shared Brain that keeps Cowork/Code/Gary in sync.",
+  "version": "0.7.0",
+  "description": "KH's shared skill bundle \u2014 same skills on every machine, a bridge to Gary, the Shared Brain that keeps Cowork/Code/Gary in sync, and Buildertrend-style job management.",
   "author": {
     "name": "KH"
   },
