@@ -93,6 +93,16 @@ Punch list = checklist in `todos.md` with responsible sub per item; track to
 zero before closing. After closing, `warranty.md` records claims (date,
 issue, photos, responsible sub, appointment, resolution, owner sign-off).
 
+### Gantt view ("show me the schedule / gantt")
+Render the schedule as an interactive chart from
+`references/gantt-template.html`: copy the template, replace the DATA block
+(TITLE, SUBTITLE_NOTE, PHASES, TASKS) with the job's `schedule.md` rows —
+task IDs, names, durations, predecessors, phase index; pin in-progress tasks
+to their actual position with the startOverride field. Save it as
+`<Job Name>/gantt.html` in the job folder (so it syncs to every device via
+OneDrive) and send it to the user rendered. Works on phones — it's a
+standalone HTML file, dark-mode aware, tappable rows.
+
 ### Status report ("how are my jobs doing")
 Read every active job's `job.md`, `schedule.md`, `budget.md`, and latest
 daily log. Report per job: phase, schedule vs. baseline, budget variance,

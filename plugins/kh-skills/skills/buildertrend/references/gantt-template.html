@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#fcfcfb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
+<title>KH Schedule — Gantt</title>
+<!--
+  KH Gantt template (buildertrend skill).
+  To render a real job: replace TITLE, SUBTITLE_NOTE, PHASES, and TASKS in the
+  DATA block below with the job's schedule.md contents, save as
+  <Job Name>-gantt.html, and send it to the user. Dates are computed from
+  predecessors; give a task an explicit 6th element (start working-day) to pin
+  it to where it actually is on a live job.
+-->
+<style>
+  .viz-root {
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --p0: #2a78d6; --p1: #1baf7a; --p2: #eda100; --p3: #008300;
+    --p4: #4a3aa7; --p5: #e34948; --p6: #e87ba4; --p7: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    .viz-root {
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255,255,255,0.10);
+      --p0: #3987e5; --p1: #199e70; --p2: #c98500; --p3: #008300;
+      --p4: #9085e9; --p5: #e66767; --p6: #d55181; --p7: #d95926;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page); color: var(--text-primary);
+  }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px 24px;
+    max-width: 1180px; margin: 0 auto;
+  }
+  h1 { font-size: 17px; font-weight: 600; margin: 0 0 2px; }
+  .sub { font-size: 12.5px; color: var(--text-secondary); margin: 0 0 14px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 6px 16px;
+    font-size: 11.5px; color: var(--text-secondary); margin-bottom: 14px;
+  }
+  .legend .key { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .legend .diamond-key {
+    width: 9px; height: 9px; flex: none; background: var(--text-primary);
+    transform: rotate(45deg); border-radius: 1px;
+  }
+
+  .gantt { display: grid; grid-template-columns: 262px 1fr; font-size: 12px; }
+  .axis-row { display: contents; }
+  .axis-label-spacer { border-bottom: 1px solid var(--axis); }
+  .axis-band { position: relative; height: 26px; border-bottom: 1px solid var(--axis); }
+  .axis-band .tick {
+    position: absolute; top: 0; bottom: 0; width: 1px; background: transparent;
+  }
+  .axis-band .tick span {
+    position: absolute; top: 4px; left: 0; transform: translateX(-50%);
+    font-size: 10.5px; color: var(--text-muted); white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .row { display: contents; }
+  .row-label {
+    padding: 0 12px 0 4px; display: flex; align-items: center; gap: 7px;
+    height: 24px; color: var(--text-secondary); overflow: hidden;
+  }
+  .row-label .tid {
+    color: var(--text-muted); font-variant-numeric: tabular-nums;
+    width: 18px; flex: none; text-align: right; font-size: 10.5px;
+  }
+  .row-label .tname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-plot { position: relative; height: 24px; }
+  .row-plot .gridlayer { position: absolute; inset: 0; pointer-events: none; }
+  .gridline { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); }
+
+  .phase-label {
+    height: 34px; display: flex; align-items: flex-end; padding: 0 12px 5px 4px;
+    font-weight: 600; font-size: 12px; color: var(--text-primary); white-space: nowrap;
+  }
+  .phase-label .dot { width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; flex: none; }
+  .phase-plot { position: relative; height: 34px; }
+  .phase-span {
+    position: absolute; bottom: 5px; height: 3px; border-radius: 2px; opacity: 0.55;
+  }
+  .phase-days {
+    position: absolute; bottom: 12px; font-size: 10.5px; color: var(--text-muted);
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+
+  .bar {
+    position: absolute; top: 6px; height: 12px; border-radius: 4px;
+    min-width: 3px;
+  }
+  .diamond {
+    position: absolute; top: 7px; width: 10px; height: 10px;
+    background: var(--text-primary); transform: rotate(45deg);
+    border-radius: 2px; box-shadow: 0 0 0 2px var(--surface-1);
+    margin-left: -5px;
+  }
+  .hit {
+    position: absolute; inset: 0; cursor: default; border-radius: 4px;
+  }
+  .hit:hover, .hit:focus-visible { background: rgba(137,135,129,0.12); outline: none; }
+
+  #tooltip {
+    position: fixed; z-index: 10; pointer-events: none; display: none;
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 11px; font-size: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18); max-width: 300px;
+  }
+  #tooltip .t-name { font-weight: 600; margin-bottom: 3px; display: flex; align-items: center; gap: 7px; }
+  #tooltip .t-key { width: 3px; height: 14px; border-radius: 2px; flex: none; }
+  #tooltip .t-row { color: var(--text-secondary); line-height: 1.5; }
+  #tooltip .t-row b { color: var(--text-primary); font-weight: 600; }
+
+  details { margin-top: 18px; font-size: 12.5px; }
+  summary { cursor: pointer; color: var(--text-secondary); }
+  table { border-collapse: collapse; margin-top: 10px; width: 100%; font-size: 12px; }
+  th, td { text-align: left; padding: 4px 10px 4px 0; border-bottom: 1px solid var(--grid); }
+  th { color: var(--text-muted); font-weight: 500; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .foot { margin-top: 14px; font-size: 11.5px; color: var(--text-muted); }
+
+  @media (max-width: 700px) {
+    body { padding: 8px; }
+    .card { padding: 14px 10px 16px; border-radius: 10px; }
+    .gantt { grid-template-columns: 148px 1fr; font-size: 11px; }
+    .row-label { padding-right: 6px; gap: 4px; }
+    .row-label .tid { display: none; }
+    .phase-label { font-size: 11px; padding-right: 6px; }
+    .legend { gap: 4px 10px; font-size: 10.5px; }
+    h1 { font-size: 15px; }
+    th, td { padding-right: 6px; }
+  }
+</style>
+</head>
+<body class="viz-root">
+<div class="card">
+  <h1>KH new-construction schedule — Gantt view</h1>
+  <p class="sub" id="subtitle">Custom single-family build template · durations in working days</p>
+  <div class="legend" id="legend"></div>
+  <div class="gantt" id="gantt"></div>
+  <details>
+    <summary>Table view (all 65 tasks)</summary>
+    <table id="datatable"></table>
+  </details>
+  <p class="foot">Working-day timeline (weekends/holidays excluded). Weather-sensitive: sitework, roofing, exterior, flatwork. Inspection tasks vary by jurisdiction — pad 1–5 days. Hover or focus a row for details.</p>
+</div>
+<div id="tooltip" role="status"></div>
+
+<script>
+// ===================== DATA — replace for a real job =====================
+const TITLE = "KH new-construction schedule — Gantt view";
+const SUBTITLE_NOTE = "Custom single-family build template";
+const PHASES = [
+  "Phase 0 — Pre-Construction",
+  "Phase 1 — Sitework & Foundation",
+  "Phase 2 — Framing & Dry-In",
+  "Phase 3 — Rough-Ins",
+  "Phase 4 — Insulation & Drywall",
+  "Phase 5 — Interior Finishes",
+  "Phase 6 — Exterior Completion",
+  "Phase 7 — Completion & Closing"
+];
+// [id, name, duration, [predecessors], phaseIndex, startOverride?]
+// pred "27SS+2" = start-to-start with 2-day lag; startOverride (optional, in
+// working days from day 0) pins a task to its actual position on a live job.
+const TASKS = [
+  [1,"Final plans, specs, engineering",15,[],0],
+  [2,"Contract signed / estimate approved",0,["1"],0],
+  [3,"Permit application and review",20,["2"],0],
+  [4,"Survey and stake lot",2,["2"],0],
+  [5,"Order long-lead items (windows, trusses, cabinets)",1,["2"],0],
+  [6,"MILESTONE: Building permit issued",0,["3"],0],
+  [7,"Temp utilities, erosion control, portable toilet",2,["6"],1],
+  [8,"Clear and rough-grade lot",3,["6","4"],1],
+  [9,"Excavate foundation",3,["8","7"],1],
+  [10,"Form and pour footings",3,["9"],1],
+  [11,"Footing inspection",1,["10"],1],
+  [12,"Foundation walls",5,["11"],1],
+  [13,"Waterproofing, drains, termite treat",2,["12"],1],
+  [14,"Foundation inspection; backfill",2,["13"],1],
+  [15,"Underslab plumbing rough + inspection",3,["12"],1],
+  [16,"Pour basement/garage slabs",2,["15","14"],1],
+  [17,"MILESTONE: Foundation complete (draw)",0,["16"],1],
+  [18,"Frame floor system",4,["17"],2],
+  [19,"Frame walls",8,["18"],2],
+  [20,"Set roof trusses / frame roof",5,["19"],2],
+  [21,"Sheathing, house wrap",3,["20"],2],
+  [22,"Install windows and exterior doors",3,["21"],2],
+  [23,"Roofing",5,["21"],2],
+  [24,"Framing inspection",1,["22","23"],2],
+  [25,"MILESTONE: Dried-in (draw)",0,["24"],2],
+  [26,"HVAC rough-in",5,["25"],3],
+  [27,"Plumbing top-out rough-in",5,["26SS+2"],3],
+  [28,"Electrical rough-in",5,["27"],3],
+  [29,"Low-voltage / security / AV rough",2,["28SS"],3],
+  [30,"Fireplace, tubs/showers set",2,["27"],3],
+  [31,"Rough inspections (all trades)",2,["26","27","28","29","30"],3],
+  [32,"Exterior siding / masonry / trim",10,["23"],3],
+  [33,"Exterior paint",4,["32"],3],
+  [34,"MILESTONE: Rough inspections passed",0,["31"],3],
+  [35,"Insulation + air-seal",3,["34"],4],
+  [36,"Insulation inspection",1,["35"],4],
+  [37,"Hang drywall",4,["36"],4],
+  [38,"Tape, mud, sand",7,["37"],4],
+  [39,"Texture / prime",2,["38"],4],
+  [40,"MILESTONE: Drywall complete (draw)",0,["39"],4],
+  [41,"Interior trim: doors, base, stairs",7,["40"],5],
+  [42,"Paint interior (1st pass)",5,["41"],5],
+  [43,"Install cabinets and vanities",4,["42"],5],
+  [44,"Countertops: template, fab, install",8,["43"],5],
+  [45,"Tile (baths, backsplash)",6,["42"],5],
+  [46,"Hardwood flooring",4,["42"],5],
+  [47,"Finish plumbing",3,["44","45"],5],
+  [48,"Finish electrical",3,["44"],5],
+  [49,"Finish HVAC + startup",2,["48SS"],5],
+  [50,"Appliances",1,["44","48"],5],
+  [51,"Carpet",2,["42","41"],5],
+  [52,"Paint touch-up / final coat",3,["47","48","50","51"],5],
+  [53,"Mirrors, shower doors, hardware",2,["52"],5],
+  [54,"Garage doors",1,["33"],6],
+  [55,"Driveway, walks, patios",4,["33"],6],
+  [56,"Final grade, landscaping, irrigation",6,["55"],6],
+  [57,"Deck / porch finish",4,["33"],6],
+  [58,"Final cleaning",2,["53"],7],
+  [59,"Final MEP + building inspections",2,["53","56"],7],
+  [60,"MILESTONE: Certificate of Occupancy",0,["59"],7],
+  [61,"Builder punch walk; punch work",5,["58","60"],7],
+  [62,"Client blue-tape walkthrough",1,["61"],7],
+  [63,"Punch completion and verification",4,["62"],7],
+  [64,"MILESTONE: Closing / handover (final draw)",0,["63"],7],
+  [65,"Warranty begins (30-day + 11-month visits)",0,["64"],7]
+];
+// =================== end DATA ===================
+
+// Forward pass: compute start/end in working days
+const byId = {};
+for (const [id, name, dur, preds, ph, startOverride] of TASKS) {
+  let start = 0;
+  for (const p of preds) {
+    const m = p.match(/^(\d+)(SS)?(?:\+(\d+))?$/);
+    const pred = byId[m[1]];
+    const lag = m[3] ? +m[3] : 0;
+    const candidate = (m[2] === "SS" ? pred.start : pred.end) + lag;
+    start = Math.max(start, candidate);
+  }
+  if (startOverride != null) start = startOverride;
+  byId[id] = { id, name, dur, preds, ph, start, end: start + dur };
+}
+const tasks = Object.values(byId);
+const TOTAL = Math.max(...tasks.map(t => t.end));
+document.title = TITLE;
+document.querySelector("h1").textContent = TITLE;
+document.getElementById("subtitle").textContent =
+  `${SUBTITLE_NOTE} · ${TOTAL} working days ≈ ${(TOTAL/21.7).toFixed(1)} months`;
+
+const pct = d => (d / TOTAL * 100) + "%";
+const phaseVar = i => `var(--p${i})`;
+const wkday = d => `Wk ${Math.floor(d/5)+1}, day ${d%5+1}`;
+
+// Legend
+const legend = document.getElementById("legend");
+PHASES.forEach((p, i) => {
+  const k = document.createElement("span"); k.className = "key";
+  const s = document.createElement("span"); s.className = "swatch";
+  s.style.background = phaseVar(i);
+  k.append(s, document.createTextNode(p.replace(/Phase \d — /, "")));
+  legend.append(k);
+});
+const mk = document.createElement("span"); mk.className = "key";
+const md = document.createElement("span"); md.className = "diamond-key";
+mk.append(md, document.createTextNode("Milestone"));
+legend.append(mk);
+
+// Grid + axis
+const gantt = document.getElementById("gantt");
+function gridLayer() {
+  const g = document.createElement("div"); g.className = "gridlayer";
+  for (let d = 5; d < TOTAL; d += 5) {
+    const line = document.createElement("div"); line.className = "gridline";
+    line.style.left = pct(d);
+    if (d % 20 !== 0) line.style.opacity = "0.45";
+    g.append(line);
+  }
+  return g;
+}
+const axisRow = document.createElement("div"); axisRow.className = "axis-row";
+const spacer = document.createElement("div"); spacer.className = "axis-label-spacer";
+const band = document.createElement("div"); band.className = "axis-band";
+// Space labels so they never collide: ~70px min per label
+const plotPx = Math.max(200, innerWidth - (innerWidth <= 700 ? 148 : 262) - 100);
+const labelStep = Math.max(20, Math.ceil(TOTAL / (plotPx / 70) / 20) * 20);
+for (let d = 0; d <= TOTAL; d += labelStep) {
+  const t = document.createElement("div"); t.className = "tick"; t.style.left = pct(d);
+  const s = document.createElement("span");
+  s.textContent = d === 0 ? "Start" : "Wk " + (d / 5);
+  t.append(s); band.append(t);
+}
+axisRow.append(spacer, band);
+gantt.append(axisRow);
+
+// Tooltip
+const tip = document.getElementById("tooltip");
+function showTip(t, x, y) {
+  tip.replaceChildren();
+  const nameEl = document.createElement("div"); nameEl.className = "t-name";
+  const key = document.createElement("span"); key.className = "t-key";
+  key.style.background = phaseVar(t.ph);
+  nameEl.append(key, document.createTextNode(`${t.id}. ${t.name.replace("MILESTONE: ","")}`));
+  tip.append(nameEl);
+  const rows = t.dur === 0
+    ? [["Milestone", wkday(t.start)]]
+    : [["Duration", `${t.dur} working day${t.dur>1?"s":""}`],
+       ["Runs", `${wkday(t.start)} → ${wkday(t.end - 1)}`]];
+  rows.push(["Phase", PHASES[t.ph].replace(/Phase \d — /, "")]);
+  if (t.preds.length) rows.push(["After", t.preds.map(p=>p.replace(/SS(\+\d+)?/," (start-to-start$1)")).join(", ")]);
+  for (const [label, val] of rows) {
+    const r = document.createElement("div"); r.className = "t-row";
+    const b = document.createElement("b"); b.textContent = val;
+    r.append(b, document.createTextNode(" — " + label));
+    tip.append(r);
+  }
+  tip.style.display = "block";
+  const rect = tip.getBoundingClientRect();
+  tip.style.left = Math.min(x + 14, innerWidth - rect.width - 10) + "px";
+  tip.style.top = Math.min(y + 14, innerHeight - rect.height - 10) + "px";
+}
+function hideTip() { tip.style.display = "none"; }
+
+// Rows
+let currentPhase = -1;
+for (const t of tasks) {
+  if (t.ph !== currentPhase) {
+    currentPhase = t.ph;
+    const phTasks = tasks.filter(x => x.ph === currentPhase);
+    const s = Math.min(...phTasks.map(x => x.start));
+    const e = Math.max(...phTasks.map(x => x.end));
+    const row = document.createElement("div"); row.className = "row";
+    const lab = document.createElement("div"); lab.className = "phase-label";
+    const dot = document.createElement("span"); dot.className = "dot";
+    dot.style.background = phaseVar(currentPhase);
+    lab.append(dot, document.createTextNode(PHASES[currentPhase]));
+    const plot = document.createElement("div"); plot.className = "phase-plot";
+    plot.append(gridLayer());
+    const span = document.createElement("div"); span.className = "phase-span";
+    span.style.left = pct(s); span.style.width = pct(e - s);
+    span.style.background = phaseVar(currentPhase);
+    const days = document.createElement("div"); days.className = "phase-days";
+    days.style.left = `calc(${pct(s)} + 2px)`;
+    days.textContent = `${e - s} wd`;
+    plot.append(span, days);
+    row.append(lab, plot);
+    gantt.append(row);
+  }
+  const row = document.createElement("div"); row.className = "row";
+  const lab = document.createElement("div"); lab.className = "row-label";
+  const tid = document.createElement("span"); tid.className = "tid";
+  tid.textContent = t.id;
+  const tname = document.createElement("span"); tname.className = "tname";
+  tname.textContent = t.name.replace("MILESTONE: ", "");
+  if (t.dur === 0 && t.name.startsWith("MILESTONE")) tname.style.fontWeight = "600";
+  lab.append(tid, tname);
+  const plot = document.createElement("div"); plot.className = "row-plot";
+  plot.append(gridLayer());
+  if (t.dur === 0) {
+    const d = document.createElement("div"); d.className = "diamond";
+    d.style.left = pct(t.start);
+    plot.append(d);
+  } else {
+    const bar = document.createElement("div"); bar.className = "bar";
+    bar.style.left = pct(t.start);
+    bar.style.width = `max(calc(${pct(t.dur)} - 2px), 3px)`;
+    bar.style.background = phaseVar(t.ph);
+    plot.append(bar);
+  }
+  const hit = document.createElement("div"); hit.className = "hit";
+  hit.tabIndex = 0;
+  hit.setAttribute("role", "img");
+  hit.setAttribute("aria-label",
+    t.dur === 0 ? `${t.name}, ${wkday(t.start)}`
+    : `${t.name}, ${t.dur} working days, ${wkday(t.start)} to ${wkday(t.end-1)}`);
+  hit.addEventListener("pointermove", e => showTip(t, e.clientX, e.clientY));
+  hit.addEventListener("pointerleave", hideTip);
+  hit.addEventListener("focus", () => {
+    const r = hit.getBoundingClientRect();
+    showTip(t, r.left + 40, r.top);
+  });
+  hit.addEventListener("blur", hideTip);
+  plot.append(hit);
+  row.append(lab, plot);
+  gantt.append(row);
+}
+
+// Table view
+const table = document.getElementById("datatable");
+const thead = document.createElement("tr");
+for (const h of ["ID","Task","Phase","Dur (wd)","Start","Finish","Predecessors"]) {
+  const th = document.createElement("th");
+  if (h.startsWith("Dur") || h === "ID") th.className = "num";
+  th.textContent = h; thead.append(th);
+}
+table.append(thead);
+for (const t of tasks) {
+  const tr = document.createElement("tr");
+  const cells = [
+    [t.id, "num"], [t.name], [PHASES[t.ph].replace(/ — .*/,"")],
+    [t.dur || "—", "num"],
+    [t.dur === 0 ? wkday(t.start) : wkday(t.start)],
+    [t.dur === 0 ? "—" : wkday(t.end - 1)],
+    [t.preds.join(", ") || "—"]
+  ];
+  for (const [v, cls] of cells) {
+    const td = document.createElement("td");
+    if (cls) td.className = cls;
+    td.textContent = v; tr.append(td);
+  }
+  table.append(tr);
+}
+</script>
+</body>
+</html>
