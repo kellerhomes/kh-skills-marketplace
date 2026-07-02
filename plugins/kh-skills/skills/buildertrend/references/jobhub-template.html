@@ -226,11 +226,12 @@ const JOBS = [
     jrt: null,
     startDate: "2024-05-15",
     currentDay: 556,
-    scheduleDelta: -17,   // prior plan closed Jul 1; adjusted close Jul 24
-    nextMilestone: { name: "Close", day: 572 },
+    scheduleDelta: -42,   // stale plan closed Jul 1; re-laid close Aug 28
+    nextMilestone: { name: "Trim complete", day: 571 },
     phase: 5,
     // [id, name, dur, [preds], phase, start(wd), pctComplete] — from Buildertrend
-    // export, tail re-laid Jul 2 2026 per field update: in trim, ~3 weeks to close.
+    // export; tail re-laid Jul 2 2026 per field update: ~3 weeks of trim left,
+    // then paint and remaining trades at the stale plan's durations.
     tasks: [
       [1,"Permit",17,[],0,0,100],
       [2,"Clear lot",4,[],1,3,100],
@@ -257,27 +258,27 @@ const JOBS = [
       [23,"Tile (phase 2)",12,[],5,479,100],
       [24,"Hardwood floors",8,[],5,495,100],
       [25,"Box drop",2,[],5,503,100],
-      [26,"Countertop template",1,[],5,505,100],
-      [27,"Concrete flat work",3,[],6,506,100],
-      [28,"Irrigation and seed",3,[],6,510,100],
-      [29,"Trim",17,[],5,543,76],
-      [30,"Paint",8,[],5,558,0],
-      [31,"Counter tops in",1,[],5,566,0],
-      [32,"HVAC trim",1,[],5,566,0],
-      [33,"Tile backsplash",1,[],5,567,0],
-      [34,"Plumbing trim",2,[],5,567,0],
-      [35,"Electrical trim",2,[],5,568,0],
-      [36,"Blower door test",1,[],5,569,0],
-      [37,"Carpet",2,[],5,569,0],
-      [38,"Cleaning",2,[],7,570,0],
-      [39,"Final inspection",1,[],7,571,0],
-      [40,"MILESTONE: Close",0,[],7,572,0]
+      [26,"Concrete flat work",3,[],6,506,100],
+      [27,"Irrigation and seed",3,[],6,510,100],
+      [28,"Trim",24,[],5,548,38],
+      [29,"Countertop template",1,[],5,568,0],
+      [30,"Paint",14,[],5,572,0],
+      [31,"Counter tops in",1,[],5,586,0],
+      [32,"HVAC trim",1,[],5,586,0],
+      [33,"Plumbing trim",2,[],5,587,0],
+      [34,"Tile backsplash",2,[],5,587,0],
+      [35,"Electrical trim",2,[],5,589,0],
+      [36,"Blower door test",1,[],5,591,0],
+      [37,"Carpet",1,[],5,591,0],
+      [38,"Cleaning",3,[],7,592,0],
+      [39,"Final inspection",1,[],7,595,0],
+      [40,"MILESTONE: Close",0,[],7,597,0]
     ],
     budget: [],
     selections: [],
     changeOrders: [],
     logs: [
-      ["Jul 2","Schedule adjusted per field update: in trim now (~76%), about 3 weeks to close. Remaining: paint \u2192 tops \u2192 mechanical trims \u2192 blower door \u2192 carpet \u2192 clean \u2192 final. Target close Fri Jul 24.",""]
+      ["Jul 2","Schedule re-laid per field update: ~3 weeks of trim left (through Thu Jul 23). Then paint Jul 24\u2013Aug 12, tops in Aug 13, mechanical trims + backsplash Aug 14\u201319, blower door + carpet Aug 20, cleaning, final inspection Aug 26. Close penciled Fri Aug 28 \u2014 confirm actual closing date.",""]
     ]
   },
   {
@@ -446,9 +447,10 @@ function homeView() {
     app.append(card);
   });
 
-  app.append($(`<div class="samplenote"><b>Schedules from Buildertrend exports</b>, updated Jul 2, 2026
-    (Boulder Creek re-laid per field update: in trim, ~3 weeks to close). Budgets and selections aren't
-    loaded yet — tell Claude the numbers or add them to the vault, then say “refresh the Job Hub.”</div>`));
+  app.append($(`<div class="samplenote"><b>Schedules from Buildertrend exports</b>, updated Jul 2, 2026.
+    Boulder Creek re-laid per field update: ~3 weeks of trim left, then paint and remaining trades —
+    close penciled Aug 28 (confirm). Budgets and selections aren't loaded yet — tell Claude the numbers
+    or add them to the vault, then say “refresh the Job Hub.”</div>`));
 }
 
 function jobView(slug, tab) {
