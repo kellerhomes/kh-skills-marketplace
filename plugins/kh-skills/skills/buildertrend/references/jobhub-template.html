@@ -200,6 +200,66 @@
     border-top: 1px solid var(--line); padding-top: 12px;
   }
   .samplenote b { color: var(--ink-2); }
+  /* ---------- buildertrend-style gantt ---------- */
+  .btg { background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .btg-canvas { position: relative; }
+  .btg-months { position: relative; height: 22px; border-bottom: 1px solid var(--line); }
+  .btg-month { position: absolute; top: 0; height: 22px; font-size: 10.5px; font-weight: 600;
+    color: var(--ink-2); padding: 4px 0 0 6px; border-left: 1px solid var(--line);
+    white-space: nowrap; overflow: hidden; }
+  .btg-days { position: relative; height: 16px; border-bottom: 1px solid var(--line); }
+  .btg-day { position: absolute; top: 1px; width: 16px; text-align: center; font-size: 8.5px;
+    color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .btg-rows { position: relative; }
+  .btg-row { position: relative; height: 26px; }
+  .btg-row.sel { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .btg-left { position: sticky; left: 0; z-index: 2; width: 150px; height: 26px;
+    background: var(--card); border-right: 1px solid var(--line); padding: 2px 8px 0 10px;
+    display: flex; flex-direction: column; justify-content: center; cursor: pointer; }
+  .btg-row.sel .btg-left { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .btg-title { font-size: 11px; font-weight: 600; color: var(--ink); line-height: 1.15;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .btg-sub { font-size: 9.5px; color: var(--ink-3); line-height: 1.2; white-space: nowrap;
+    font-variant-numeric: tabular-nums; }
+  .btg-bar { position: absolute; top: 7px; height: 12px; border-radius: 3px; min-width: 4px;
+    cursor: pointer; touch-action: pan-x; }
+  .btg-bar.done { opacity: 0.4; }
+  .btg-bar.sel { outline: 2px solid var(--accent); outline-offset: 1px; cursor: grab; touch-action: none; }
+  .btg-bar.dragging { cursor: grabbing; opacity: 0.85; }
+  .btg-dia { position: absolute; top: 8px; width: 10px; height: 10px; margin-left: -5px;
+    background: var(--ink); transform: rotate(45deg); border-radius: 1.5px; cursor: pointer;
+    box-shadow: 0 0 0 2px var(--card); }
+  .btg-dia.sel { outline: 2px solid var(--accent); outline-offset: 1px; touch-action: none; }
+  .btg-name { position: absolute; top: 6px; font-size: 10px; color: var(--ink-2);
+    white-space: nowrap; pointer-events: none; }
+  .btg-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--crit); z-index: 1; }
+  .btg-todaycap { position: absolute; top: -19px; transform: translateX(-50%); font-size: 9px;
+    font-weight: 700; color: var(--crit); background: var(--card); padding: 0 3px; }
+
+  /* edit sheet */
+  .sheet { position: fixed; z-index: 8; left: 10px; right: 10px; bottom: calc(74px + env(safe-area-inset-bottom));
+    max-width: 620px; margin: 0 auto; background: var(--card); border: 1px solid var(--hairline);
+    border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,0.22); padding: 12px 14px; font-size: 13px; }
+  .sheet .sh-head { display: flex; align-items: baseline; gap: 8px; }
+  .sheet .sh-name { font-weight: 700; font-size: 14px; }
+  .sheet .sh-dates { color: var(--ink-2); font-size: 12px; margin-left: auto;
+    font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sheet .sh-pred { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+  .sheet .sh-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .sheet button { font: inherit; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line);
+    background: var(--ground); color: var(--ink); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+  .sheet button:active { filter: brightness(0.94); }
+  .sheet button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .sheet button.danger { color: var(--crit); }
+  .sheet .sh-x { margin-left: auto; }
+  .sheet label.casc { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+    color: var(--ink-2); margin-left: 2px; }
+  .changesbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 12px;
+    color: var(--ink-2); flex-wrap: wrap; }
+  .changesbar button { font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line);
+    background: var(--card); color: var(--accent); border-radius: 7px; padding: 5px 9px; cursor: pointer; }
+
   @media (prefers-reduced-motion: no-preference) {
     .jobcard, .tile, .stat { transition: transform 0.08s ease; }
     .jobcard:active { transform: scale(0.99); }
@@ -502,51 +562,240 @@ function jobView(slug, tab) {
   app.append(tabs);
 }
 
+// ---------- Buildertrend-style editable gantt ----------
+const DAYW = 16, LEFTW = 150, EDITS_KEY = "khjobhub-edits-v1";
+let SEL = null, CASCADE = true, SCROLLX = null;
+function loadEdits() { try { return JSON.parse(localStorage.getItem(EDITS_KEY)) || {}; } catch (e) { return {}; } }
+function saveEdits(v) { try { localStorage.setItem(EDITS_KEY, JSON.stringify(v)); } catch (e) {} }
+
+function calMaps(job, maxWd) {
+  const start = new Date(job.startDate + "T12:00");
+  const wd2cal = [0], calWd = [0], calDate = [new Date(start)];
+  let d = new Date(start), cal = 0, w = 0;
+  while (w < maxWd + 5) {
+    d.setDate(d.getDate() + 1); cal++;
+    const g = d.getDay();
+    calDate[cal] = new Date(d);
+    if (g !== 0 && g !== 6) { w++; wd2cal[w] = cal; calWd[cal] = w; }
+    else calWd[cal] = -1;
+  }
+  return { start, wd2cal, calWd, calDate, calTotal: cal };
+}
+
 function scheduleTab(root, job) {
-  const { tasks, total } = schedule(job);
-  root.append($(`<div class="eyebrow">Schedule · today ${esc(fmtDay(job, job.currentDay, true))}
-    · close ${esc(fmtDay(job, total, true))}</div>`));
-  const g = $(`<div class="gantt"></div>`);
-  const pct = d => (d / total * 100) + "%";
+  const allEdits = loadEdits(), edits = allEdits[job.slug] || {};
+  const base = schedule(job).tasks;
+  const tasks = base.map(t => {
+    const e = edits[t.id] || {};
+    const start = e.start != null ? e.start : t.start;
+    const dur = e.dur != null ? e.dur : t.dur;
+    return { ...t, start, dur, end: start + dur, baseStart: t.start, baseDur: t.dur,
+      predBroken: !!e.predBroken };
+  }).sort((x, y) => x.start - y.start || x.id - y.id);
+  const totalWd = Math.max(...tasks.map(t => t.end), job.currentDay) + 8;
+  const M = calMaps(job, totalWd);
 
-  // axis
-  const labelStep = Math.max(20, Math.ceil(total / 4 / 20) * 20);
-  const axis = $(`<div class="g-axis"></div>`);
-  for (let d = labelStep; d < total; d += labelStep)
-    axis.append($(`<span style="left:${pct(d)}">${esc(fmtDay(job, d, true))}</span>`));
-  g.append($(`<div class="g-axis-spacer"></div>`), axis);
-
-  const gridlines = (plot) => {
-    for (let d = 10; d < total; d += 10)
-      plot.append($(`<div class="g-grid" style="left:${pct(d)}"></div>`));
-    if (job.currentDay > 0 && job.currentDay < total)
-      plot.append($(`<div class="g-today" style="left:${pct(job.currentDay)}"></div>`));
+  // inferred finish-to-start links: pred = latest-finishing trade that ends by my start
+  for (const t of tasks) {
+    let best = null;
+    for (const o of tasks) {
+      if (o === t || o.end > t.start || o.dur === 0) continue;
+      if (!best || o.end > best.end || (o.end === best.end && o.start > best.start)) best = o;
+    }
+    t.pred = best;
+  }
+  const chain = (t, out) => {
+    out = out || new Set();
+    for (const s of tasks) if (s.pred === t && !s.predBroken && !out.has(s)) { out.add(s); chain(s, out); }
+    return out;
+  };
+  const mutate = (list, fn) => {
+    const all = loadEdits(); const e = all[job.slug] = all[job.slug] || {};
+    for (const x of list) { e[x.id] = e[x.id] || {}; fn(e[x.id], x); }
+    saveEdits(all); route();
+  };
+  const moveBy = (t, dWd) => {
+    if (!dWd) return;
+    const list = CASCADE ? [t, ...chain(t)] : [t];
+    if (list.some(x => x.start + dWd < 0)) return;
+    mutate(list, (e, x) => { e.start = x.start + dWd; });
   };
 
-  let ph = -1;
-  for (const t of tasks) {
-    if (t.ph !== ph) {
-      ph = t.ph;
-      const phTasks = tasks.filter(x => x.ph === ph);
-      const s0 = Math.min(...phTasks.map(x => x.start)), e0 = Math.max(...phTasks.map(x => x.end));
-      const lab = $(`<div class="g-lab phase"><span>${esc(PHASE_NAMES[ph])}</span></div>`);
-      const plot = $(`<div class="g-plot phase"></div>`);
-      gridlines(plot);
-      plot.append($(`<div class="g-span" style="left:${pct(s0)};width:${pct(e0-s0)};background:var(--p${ph})"></div>`));
-      g.append(lab, plot);
+  root.append($(`<div class="eyebrow">Schedule · today ${esc(fmtDay(job, job.currentDay, true))}
+    · close ${esc(fmtDay(job, tasks[tasks.length-1].end, true))} · tap a trade, then drag or nudge</div>`));
+
+  const wrap = $(`<div class="btg"></div>`);
+  const W = LEFTW + (M.calTotal + 1) * DAYW;
+  const canvas = $(`<div class="btg-canvas" style="width:${W}px"></div>`);
+
+  // month header
+  const months = $(`<div class="btg-months"></div>`);
+  let mStart = 0;
+  for (let c = 1; c <= M.calTotal + 1; c++) {
+    const prev = M.calDate[c-1], cur = M.calDate[Math.min(c, M.calTotal)];
+    if (c > M.calTotal || cur.getMonth() !== prev.getMonth()) {
+      months.append($(`<div class="btg-month" style="left:${LEFTW + mStart*DAYW}px;width:${(c-mStart)*DAYW}px">
+        ${MONTHS[prev.getMonth()]} ${prev.getFullYear()}</div>`));
+      mStart = c;
     }
-    const lab = $(`<div class="g-lab"><span>${esc(t.name.replace("MILESTONE: ",""))}</span></div>`);
-    if (t.dur === 0) lab.firstChild.style.fontWeight = 650;
-    const plot = $(`<div class="g-plot"></div>`);
-    gridlines(plot);
-    if (t.dur === 0) plot.append($(`<div class="g-diamond" style="left:${pct(t.start)}"></div>`));
-    else plot.append($(`<div class="g-bar ${t.pct === 100 ? "done" : ""}"
-      style="left:${pct(t.start)};width:max(calc(${pct(t.dur)} - 2px),3px);background:var(--p${t.ph})"></div>`));
-    g.append(lab, plot);
   }
-  root.append(g);
-  root.append($(`<div class="legend-note">Red line = today (${esc(fmtDay(job, job.currentDay, true))}).
-    Faded bars are complete. ◆ = milestone.</div>`));
+  canvas.append(months);
+  // day numbers
+  const days = $(`<div class="btg-days"></div>`);
+  for (let c = 0; c <= M.calTotal; c++)
+    days.append($(`<div class="btg-day" style="left:${LEFTW + c*DAYW}px">${M.calDate[c].getDate()}</div>`));
+  canvas.append(days);
+
+  // rows with weekend shading
+  const rows = $(`<div class="btg-rows"></div>`);
+  const satOff = (6 - M.start.getDay() + 7) % 7;
+  rows.style.background = `repeating-linear-gradient(90deg, color-mix(in srgb, var(--ink) 5%, transparent) 0, color-mix(in srgb, var(--ink) 5%, transparent) ${2*DAYW}px, transparent ${2*DAYW}px, transparent ${7*DAYW}px)`;
+  rows.style.backgroundPositionX = (LEFTW + satOff * DAYW) + "px";
+
+  const todayCal = M.wd2cal[job.currentDay];
+  for (const t of tasks) {
+    const row = $(`<div class="btg-row ${SEL === t.id ? "sel" : ""}"></div>`);
+    const name = t.name.replace("MILESTONE: ", "");
+    const left = $(`<div class="btg-left"><div class="btg-title">${esc(name)}</div>
+      <div class="btg-sub">${esc(fmtDay(job, t.start, true))}${t.dur ? " · " + t.dur + "d" : ""}</div></div>`);
+    left.addEventListener("click", () => { SEL = SEL === t.id ? null : t.id; SCROLLX = wrap.scrollLeft; route(); });
+    row.append(left);
+    const calS = M.wd2cal[t.start];
+    let mark, right;
+    if (t.dur === 0) {
+      mark = $(`<div class="btg-dia ${SEL === t.id ? "sel" : ""}" style="left:${LEFTW + calS*DAYW + DAYW/2}px"></div>`);
+      right = LEFTW + calS*DAYW + DAYW;
+    } else {
+      const calE = M.wd2cal[t.start + t.dur - 1] + 1;
+      mark = $(`<div class="btg-bar ${t.pct === 100 ? "done" : ""} ${SEL === t.id ? "sel" : ""}"
+        style="left:${LEFTW + calS*DAYW}px;width:${(calE - calS)*DAYW - 2}px;background:var(--p${t.ph})"></div>`);
+      right = LEFTW + calE*DAYW;
+    }
+    if (SEL !== t.id) {
+      mark.addEventListener("click", () => { SEL = t.id; SCROLLX = wrap.scrollLeft; route(); });
+    } else {
+      // drag to move (selected only, so page panning still works elsewhere)
+      let sx = null, dx = 0, moved = false;
+      mark.addEventListener("pointerdown", ev => {
+        sx = ev.clientX; dx = 0; moved = false;
+        mark.setPointerCapture(ev.pointerId); mark.classList.add("dragging");
+        ev.preventDefault();
+      });
+      mark.addEventListener("pointermove", ev => {
+        if (sx == null) return; dx = ev.clientX - sx;
+        if (Math.abs(dx) > 4) moved = true;
+        mark.style.transform = `translateX(${Math.round(dx / DAYW) * DAYW}px)`;
+      });
+      const drop = () => {
+        if (sx == null) return;
+        const dCal = Math.round(dx / DAYW); sx = null;
+        mark.classList.remove("dragging"); mark.style.transform = "";
+        if (!moved) { SEL = null; SCROLLX = wrap.scrollLeft; route(); return; }
+        if (!dCal) return;
+        let target = Math.max(0, Math.min(M.calTotal, M.wd2cal[t.start] + dCal));
+        let wdNew = -1;
+        for (let k = 0; k < 5 && wdNew < 0; k++) {
+          if (M.calWd[target + k] >= 0) wdNew = M.calWd[target + k];
+          else if (target - k >= 0 && M.calWd[target - k] >= 0) wdNew = M.calWd[target - k];
+        }
+        SCROLLX = wrap.scrollLeft;
+        if (wdNew >= 0) moveBy(t, wdNew - t.start);
+      };
+      mark.addEventListener("pointerup", drop);
+      mark.addEventListener("pointercancel", drop);
+    }
+    row.append(mark);
+    row.append($(`<div class="btg-name" style="left:${right + 6}px">${esc(name)}</div>`));
+    rows.append(row);
+  }
+  if (todayCal != null) {
+    const tl = $(`<div class="btg-today" style="left:${LEFTW + todayCal*DAYW + DAYW/2}px"></div>`);
+    tl.append($(`<div class="btg-todaycap">TODAY</div>`));
+    rows.append(tl);
+  }
+  canvas.append(rows);
+  wrap.append(canvas);
+  root.append(wrap);
+
+  // changes bar
+  const changed = tasks.filter(t => t.start !== t.baseStart || t.dur !== t.baseDur || t.predBroken);
+  if (changed.length) {
+    const bar = $(`<div class="changesbar"><span><b>${changed.length}</b> local change${changed.length>1?"s":""} on this device</span></div>`);
+    const copyBtn = $(`<button>Copy for Claude</button>`);
+    copyBtn.addEventListener("click", () => {
+      const txt = job.name + " schedule changes:\n" + changed.map(t =>
+        `- ${t.name.replace("MILESTONE: ","")}: ` +
+        (t.start !== t.baseStart ? `moved ${fmtDay(job, t.baseStart, true)} → ${fmtDay(job, t.start, true)}` : "") +
+        (t.dur !== t.baseDur ? ` duration ${t.baseDur}→${t.dur}d` : "") +
+        (t.predBroken ? " (link broken)" : "")).join("\n");
+      if (navigator.clipboard) navigator.clipboard.writeText(txt);
+      copyBtn.textContent = "Copied ✓";
+    });
+    const resetBtn = $(`<button>Reset all</button>`);
+    resetBtn.addEventListener("click", () => {
+      const all = loadEdits(); delete all[job.slug]; saveEdits(all); SEL = null; route();
+    });
+    bar.append(copyBtn, resetBtn);
+    root.append(bar);
+  }
+  root.append($(`<div class="legend-note">Red line = today. Moves cascade through the linked trades after
+    (uncheck “move linked too” to move one trade alone; “break link” frees a trade from its predecessor).
+    Edits save on this device — “Copy for Claude” to make them permanent for everyone.</div>`));
+
+  // edit sheet
+  const selTask = tasks.find(t => t.id === SEL);
+  if (selTask) {
+    const t = selTask;
+    const endLbl = t.dur ? `${fmtDay(job, t.start, false)} – ${fmtDay(job, t.start + t.dur - 1, true)} · ${t.dur}d`
+      : fmtDay(job, t.start, true);
+    const sheet = $(`<div class="sheet"></div>`);
+    sheet.append($(`<div class="sh-head"><span class="sh-name">${esc(t.name.replace("MILESTONE: ",""))}</span>
+      <span class="sh-dates">${esc(endLbl)}</span></div>`));
+    const nLinked = chain(t).size;
+    sheet.append($(`<div class="sh-pred">${t.pred
+      ? (t.predBroken ? "Link to “" + esc(t.pred.name.replace("MILESTONE: ","")) + "” broken — moves independently"
+                      : "Follows “" + esc(t.pred.name.replace("MILESTONE: ","")) + "”")
+      : "No predecessor"} · ${nLinked} linked trade${nLinked===1?"":"s"} after</div>`));
+    const btn = (label, fn, cls) => { const b = $(`<button class="${cls||""}">${label}</button>`);
+      b.addEventListener("click", () => { const g = document.querySelector(".btg"); if (g) SCROLLX = g.scrollLeft; fn(); }); return b; };
+    const r1 = $(`<div class="sh-row"></div>`);
+    r1.append(
+      btn("◀ 1d", () => moveBy(t, -1)),
+      btn("1d ▶", () => moveBy(t, 1)),
+      btn("◀ 1wk", () => moveBy(t, -5)),
+      btn("1wk ▶", () => moveBy(t, 5))
+    );
+    if (t.dur > 0) r1.append(
+      btn("− dur", () => { if (t.dur <= 1) return;
+        const list = CASCADE ? [...chain(t)] : [];
+        const all = loadEdits(); const e = all[job.slug] = all[job.slug] || {};
+        (e[t.id] = e[t.id] || {}).dur = t.dur - 1;
+        for (const x of list) (e[x.id] = e[x.id] || {}).start = x.start - 1;
+        saveEdits(all); route(); }),
+      btn("+ dur", () => {
+        const list = CASCADE ? [...chain(t)] : [];
+        const all = loadEdits(); const e = all[job.slug] = all[job.slug] || {};
+        (e[t.id] = e[t.id] || {}).dur = t.dur + 1;
+        for (const x of list) (e[x.id] = e[x.id] || {}).start = x.start + 1;
+        saveEdits(all); route(); })
+    );
+    const r2 = $(`<div class="sh-row"></div>`);
+    if (t.pred) r2.append(btn(t.predBroken ? "Relink" : "Break link",
+      () => mutate([t], e => { e.predBroken = !t.predBroken; }), "danger"));
+    const casc = $(`<label class="casc"><input type="checkbox" ${CASCADE ? "checked" : ""}> move linked too</label>`);
+    casc.querySelector("input").addEventListener("change", ev => { CASCADE = ev.target.checked; });
+    r2.append(casc);
+    r2.append(btn("Done", () => { SEL = null; route(); }, "primary sh-x"));
+    sheet.append(r1, r2);
+    root.append(sheet);
+  }
+
+  // restore scroll (or bring today into view on first open)
+  requestAnimationFrame(() => {
+    wrap.scrollLeft = SCROLLX != null ? SCROLLX
+      : Math.max(0, LEFTW + (todayCal || 0) * DAYW - wrap.clientWidth * 0.55);
+    SCROLLX = null;
+  });
 }
 
 function budgetTab(root, job) {
