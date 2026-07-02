@@ -413,6 +413,7 @@ let JOBS = [
 ];
 /* ============================== end DATA ============================== */
 
+const BUILD = 8; // bump on every app change — shown in the header
 const $ = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstChild; };
 const money = (n) => (n < 0 ? "−$" : "$") + Math.abs(Math.round(n)).toLocaleString();
 const moneyK = (n) => (n < 0 ? "−$" : "$") + (Math.abs(n) >= 1e6 ? (Math.abs(n)/1e6).toFixed(2) + "M" : Math.round(Math.abs(n)/1000) + "K");
@@ -469,7 +470,7 @@ function homeView() {
   const app = document.getElementById("app");
   app.replaceChildren();
   app.append($(`<header class="top"><span class="wordmark">KH<span class="slash"> /</span> JOB HUB</span>
-    <span class="sheetno">${esc(GENERATED)}</span></header>`));
+    <span class="sheetno">${esc(GENERATED)} · b${BUILD}${SERVER ? " · server" : ""}</span></header>`));
 
   const stats = JOBS.map(jobStats);
   const active = JOBS.filter(j => j.status !== "Closed").length;
@@ -530,7 +531,7 @@ function jobView(slug, tab) {
   const s = jobStats(job);
 
   app.append($(`<header class="top"><a class="back" href="#/">‹ Jobs</a>
-    <span class="sheetno">${esc([job.status, job.contractType].filter(Boolean).join(" · "))}</span></header>`));
+    <span class="sheetno">${esc([job.status, job.contractType].filter(Boolean).join(" · "))} · b${BUILD}</span></header>`));
   const meta = [job.address !== job.name ? job.address : "", job.client].filter(Boolean).join(" · ");
   app.append($(`<div><div class="jobtitle">${esc(job.name)}</div>
     ${meta ? `<div class="jobmeta">${esc(meta)}</div>` : ""}</div>`));
