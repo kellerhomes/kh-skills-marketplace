@@ -1,0 +1,640 @@
+<title>KH Job Hub</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    --ground: #f5f4ef;
+    --card: #fdfdfb;
+    --ink: #15171c;
+    --ink-2: #575b63;
+    --ink-3: #8b8e94;
+    --line: #e3e1d8;
+    --hairline: rgba(21,23,28,0.10);
+    --accent: #2450b8;
+    --accent-ink: #ffffff;
+    --good: #0ca30c; --good-text: #067006;
+    --warn: #b97e00;
+    --crit: #d03b3b;
+    --p0: #2a78d6; --p1: #1baf7a; --p2: #eda100; --p3: #008300;
+    --p4: #4a3aa7; --p5: #e34948; --p6: #e87ba4; --p7: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #111214;
+      --card: #1b1c1f;
+      --ink: #f2f2ef;
+      --ink-2: #b9bcc2;
+      --ink-3: #85888e;
+      --line: #2b2c2f;
+      --hairline: rgba(255,255,255,0.10);
+      --accent: #6f95e8;
+      --accent-ink: #0d1730;
+      --good: #0ca30c; --good-text: #4cc24c;
+      --warn: #e0a11c;
+      --crit: #e66767;
+      --p0: #3987e5; --p1: #199e70; --p2: #c98500; --p3: #008300;
+      --p4: #9085e9; --p5: #e66767; --p6: #d55181; --p7: #d95926;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px; line-height: 1.45;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #app { max-width: 640px; margin: 0 auto; padding: 0 14px 96px; }
+
+  /* ---------- title-block chrome ---------- */
+  header.top {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--ground);
+    padding: calc(10px + env(safe-area-inset-top)) 0 8px;
+    border-bottom: 1px solid var(--line);
+    margin: 0 0 14px;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .wordmark { font-weight: 700; font-size: 15px; letter-spacing: 0.14em; }
+  .wordmark .slash { color: var(--accent); }
+  .sheetno { margin-left: auto; font-size: 10.5px; letter-spacing: 0.12em;
+    color: var(--ink-3); text-transform: uppercase; font-variant-numeric: tabular-nums; }
+  .eyebrow {
+    font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--ink-3); margin: 22px 2px 8px; font-weight: 600;
+  }
+  .eyebrow:first-of-type { margin-top: 4px; }
+
+  a.back { color: var(--accent); text-decoration: none; font-size: 13.5px; font-weight: 600; }
+
+  /* ---------- tiles ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .tile {
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 10px;
+    padding: 12px 14px 11px;
+  }
+  .tile .t-label { font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em;
+    text-transform: uppercase; }
+  .tile .t-value { font-size: 24px; font-weight: 650; margin-top: 2px; }
+  .tile .t-sub { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
+
+  /* ---------- job cards ---------- */
+  .jobcard {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 14px 16px 14px; margin-bottom: 10px;
+    border-left: 4px solid var(--jc, var(--accent));
+  }
+  .jobcard:active { filter: brightness(0.97); }
+  .jc-head { display: flex; align-items: baseline; gap: 8px; }
+  .jc-name { font-size: 17px; font-weight: 650; }
+  .jc-client { font-size: 12.5px; color: var(--ink-3); margin-left: auto; white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+    background: var(--ground); border: 1px solid var(--line); color: var(--ink-2);
+  }
+  .chip.ok   { color: var(--good-text); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .chip.crit { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 40%, transparent); }
+  .jc-next { font-size: 12.5px; color: var(--ink-2); margin-top: 9px; }
+  .jc-next b { font-weight: 600; color: var(--ink); }
+
+  /* progress meter */
+  .meter { height: 6px; border-radius: 3px; margin-top: 10px;
+    background: color-mix(in srgb, var(--jc, var(--accent)) 18%, transparent);
+    position: relative; overflow: hidden; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px;
+    background: var(--jc, var(--accent)); }
+
+  /* ---------- job screen ---------- */
+  .jobtitle { font-size: 21px; font-weight: 700; margin: 2px 0 1px; text-wrap: balance; }
+  .jobmeta { font-size: 12.5px; color: var(--ink-2); }
+  .statgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .stat { background: var(--card); border: 1px solid var(--hairline); border-radius: 10px;
+    padding: 9px 11px 8px; }
+  .stat .s-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .stat .s-value { font-size: 15.5px; font-weight: 650; margin-top: 1px; white-space: nowrap; }
+  .stat .s-value.ok { color: var(--good-text); }
+  .stat .s-value.warn { color: var(--warn); }
+  .stat .s-value.crit { color: var(--crit); }
+
+  /* ---------- tab bar ---------- */
+  nav.tabs {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 6;
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: center; gap: 2px;
+    padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav.tabs a {
+    flex: 1; max-width: 150px; text-align: center; text-decoration: none;
+    color: var(--ink-3); font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    padding: 7px 2px 5px; border-radius: 9px; text-transform: uppercase;
+  }
+  nav.tabs a .glyph { display: block; font-size: 16px; margin-bottom: 1px; }
+  nav.tabs a.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+  /* ---------- schedule / gantt ---------- */
+  .gantt { display: grid; grid-template-columns: 132px 1fr; font-size: 11.5px;
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 12px 12px 14px; }
+  .g-axis { position: relative; height: 22px; border-bottom: 1px solid var(--line); }
+  .g-axis span { position: absolute; transform: translateX(-50%); top: 2px;
+    font-size: 10px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .g-axis-spacer { border-bottom: 1px solid var(--line); }
+  .g-lab { height: 22px; display: flex; align-items: center; padding-right: 8px;
+    color: var(--ink-2); overflow: hidden; }
+  .g-lab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .g-lab.phase { font-weight: 650; color: var(--ink); height: 30px; align-items: flex-end; padding-bottom: 6px; }
+  .g-plot { position: relative; height: 22px; }
+  .g-plot.phase { height: 30px; }
+  .g-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); opacity: 0.6; }
+  .g-bar { position: absolute; top: 6px; height: 10px; border-radius: 3px; min-width: 3px; }
+  .g-bar.done { opacity: 0.45; }
+  .g-diamond { position: absolute; top: 6px; width: 9px; height: 9px; margin-left: -4.5px;
+    background: var(--ink); transform: rotate(45deg); border-radius: 1.5px;
+    box-shadow: 0 0 0 2px var(--card); }
+  .g-span { position: absolute; bottom: 6px; height: 3px; border-radius: 2px; opacity: 0.5; }
+  .g-today { position: absolute; top: 0; bottom: 0; width: 1.5px; background: var(--crit); }
+  .g-todaytag { position: sticky; display: inline-block; font-size: 10px; color: var(--crit);
+    font-weight: 650; }
+  .legend-note { font-size: 11.5px; color: var(--ink-3); margin: 8px 2px 0; }
+
+  /* ---------- tables ---------- */
+  .tablecard { background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 4px 14px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  th { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td .sub { display: block; font-size: 11.5px; color: var(--ink-3); }
+  .pos { color: var(--good-text); } .neg { color: var(--crit); }
+
+  /* ---------- list rows (selections / activity) ---------- */
+  .rowcard { background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 2px 0; }
+  .lrow { display: flex; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line);
+    align-items: baseline; }
+  .lrow:last-child { border-bottom: none; }
+  .lrow .l-main { min-width: 0; }
+  .lrow .l-title { font-weight: 600; font-size: 14px; }
+  .lrow .l-sub { font-size: 12.5px; color: var(--ink-2); margin-top: 1px; }
+  .lrow .l-side { margin-left: auto; text-align: right; flex: none; }
+  .lrow .l-val { font-weight: 650; font-variant-numeric: tabular-nums; font-size: 13.5px; }
+  .lrow .l-when { font-size: 11.5px; color: var(--ink-3); }
+  .duechip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .duechip.late { background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); }
+  .duechip.soon { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+  .duechip.ok   { background: color-mix(in srgb, var(--good) 12%, transparent); color: var(--good-text); }
+  .duechip.done { background: var(--ground); color: var(--ink-3); }
+
+  .samplenote {
+    margin-top: 26px; font-size: 12px; color: var(--ink-3);
+    border-top: 1px solid var(--line); padding-top: 12px;
+  }
+  .samplenote b { color: var(--ink-2); }
+  @media (prefers-reduced-motion: no-preference) {
+    .jobcard, .tile, .stat { transition: transform 0.08s ease; }
+    .jobcard:active { transform: scale(0.99); }
+  }
+</style>
+
+<div id="app"></div>
+
+<script>
+/* =============== DATA — replaced by Claude from the KH vault =============== */
+const GENERATED = "Sample data · July 2, 2026";
+const PHASE_NAMES = ["Pre-Construction","Sitework & Foundation","Framing & Dry-In","Rough-Ins",
+  "Insulation & Drywall","Interior Finishes","Exterior Completion","Completion & Closing"];
+
+const JOBS = [
+  {
+    slug: "boulder-creek",
+    name: "Boulder Creek",
+    client: "D. & S. Whitfield",
+    address: "412 Boulder Creek Ln",
+    status: "Open",
+    contractType: "Fixed Price",
+    contract: 1385000,
+    jrt: 1417400,          // contract + approved COs + selection overages
+    currentDay: 88,        // today, in working days from start
+    scheduleDelta: -3,     // vs baseline: negative = behind
+    nextMilestone: { name: "Rough inspections passed", day: 99 },
+    phase: 3,
+    // [id, name, dur, [preds], phase, startOverride?, pctComplete]
+    tasks: [
+      [1,"Final plans, specs, engineering",15,[],0,null,100],
+      [2,"Contract signed",0,["1"],0,null,100],
+      [3,"Permit application and review",20,["2"],0,null,100],
+      [4,"Survey and stake lot",2,["2"],0,null,100],
+      [5,"Order long-lead items",1,["2"],0,null,100],
+      [6,"MILESTONE: Building permit issued",0,["3"],0,null,100],
+      [7,"Temp utilities, erosion control",2,["6"],1,null,100],
+      [8,"Clear and rough-grade lot",3,["6","4"],1,null,100],
+      [9,"Excavate foundation",3,["8","7"],1,null,100],
+      [10,"Form and pour footings",3,["9"],1,null,100],
+      [11,"Footing inspection",1,["10"],1,null,100],
+      [12,"Foundation walls",5,["11"],1,null,100],
+      [13,"Waterproofing, drains",2,["12"],1,null,100],
+      [14,"Foundation inspection; backfill",2,["13"],1,null,100],
+      [15,"Underslab plumbing rough",3,["12"],1,null,100],
+      [16,"Pour basement/garage slabs",2,["15","14"],1,null,100],
+      [17,"MILESTONE: Foundation complete (draw)",0,["16"],1,null,100],
+      [18,"Frame floor system",4,["17"],2,null,100],
+      [19,"Frame walls",8,["18"],2,null,100],
+      [20,"Set roof trusses / frame roof",5,["19"],2,null,100],
+      [21,"Sheathing, house wrap",3,["20"],2,null,100],
+      [22,"Install windows + ext. doors",3,["21"],2,null,100],
+      [23,"Roofing",5,["21"],2,66,100],
+      [24,"Framing inspection",1,["22","23"],2,null,100],
+      [25,"MILESTONE: Dried-in (draw)",0,["24"],2,null,100],
+      [26,"HVAC rough-in",5,["25"],3,null,100],
+      [27,"Plumbing top-out rough-in",5,["26SS+2"],3,null,80],
+      [28,"Electrical rough-in",5,["27"],3,null,20],
+      [29,"Low-voltage / AV rough",2,["28SS"],3,null,0],
+      [30,"Fireplace, tubs/showers set",2,["27"],3,null,0],
+      [31,"Rough inspections (all trades)",2,["26","27","28","29","30"],3,null,0],
+      [32,"Exterior siding / masonry / trim",10,["23"],3,null,40],
+      [33,"Exterior paint",4,["32"],3,null,0],
+      [34,"MILESTONE: Rough inspections passed",0,["31"],3,null,0],
+      [35,"Insulation + air-seal",3,["34"],4,null,0],
+      [36,"Insulation inspection",1,["35"],4,null,0],
+      [37,"Hang drywall",4,["36"],4,null,0],
+      [38,"Tape, mud, sand",7,["37"],4,null,0],
+      [39,"Texture / prime",2,["38"],4,null,0],
+      [40,"MILESTONE: Drywall complete (draw)",0,["39"],4,null,0],
+      [41,"Interior trim + stairs",7,["40"],5,null,0],
+      [42,"Paint interior (1st pass)",5,["41"],5,null,0],
+      [43,"Install cabinets and vanities",4,["42"],5,null,0],
+      [44,"Countertops: template → install",8,["43"],5,null,0],
+      [45,"Tile (baths, backsplash)",6,["42"],5,null,0],
+      [46,"Hardwood flooring",4,["42"],5,null,0],
+      [47,"Finish plumbing",3,["44","45"],5,null,0],
+      [48,"Finish electrical",3,["44"],5,null,0],
+      [49,"Finish HVAC + startup",2,["48SS"],5,null,0],
+      [50,"Appliances",1,["44","48"],5,null,0],
+      [51,"Carpet",2,["42","41"],5,null,0],
+      [52,"Paint touch-up / final coat",3,["47","48","50","51"],5,null,0],
+      [53,"Mirrors, shower doors, hardware",2,["52"],5,null,0],
+      [54,"Garage doors",1,["33"],6,null,0],
+      [55,"Driveway, walks, patios",4,["33"],6,null,0],
+      [56,"Final grade + landscaping",6,["55"],6,null,0],
+      [57,"Deck / porch finish",4,["33"],6,null,0],
+      [58,"Final cleaning",2,["53"],7,null,0],
+      [59,"Final inspections",2,["53","56"],7,null,0],
+      [60,"MILESTONE: Certificate of Occupancy",0,["59"],7,null,0],
+      [61,"Builder punch walk; punch work",5,["58","60"],7,null,0],
+      [62,"Client blue-tape walkthrough",1,["61"],7,null,0],
+      [63,"Punch completion",4,["62"],7,null,0],
+      [64,"MILESTONE: Closing (final draw)",0,["63"],7,null,0]
+    ],
+    budget: [
+      // [division, estimate, revised, committed, actual]
+      ["1000 Preliminaries", 64500, 64500, 64500, 63100],
+      ["2000 Excavation & Foundation", 118000, 118000, 118000, 121400],
+      ["3000 Rough Structure", 291000, 296800, 296800, 289900],
+      ["4000 Full Enclosure", 176000, 183200, 181000, 96500],
+      ["5000 Finishing Trades", 342000, 351400, 168200, 12800],
+      ["6000 Completion", 78500, 78500, 22000, 0]
+    ],
+    selections: [
+      // [item, room, allowance, price, deadlineDay, status]  price null = undecided
+      ["Tile — master bath + backsplash","Baths/Kitchen",14500,16200,101,"Decided"],
+      ["Plumbing finish fixtures","Whole house",9800,null,104,"Pending"],
+      ["Lighting fixtures (finish)","Whole house",7500,null,104,"Pending"],
+      ["Interior paint colors","Whole house",0,null,109,"Pending"],
+      ["Hardwood stain","Main level",0,0,109,"Decided"],
+      ["Cabinets","Kitchen + baths",68000,71900,82,"Decided"],
+      ["Countertops — quartz","Kitchen + baths",24000,26400,120,"Decided"],
+      ["Carpet","Bedrooms",8200,null,113,"Pending"]
+    ],
+    changeOrders: [
+      ["CO-003","Covered patio extension + gas line",18600,"Approved","Jun 24"],
+      ["CO-004","Upgrade to 8' interior doors, main level",6200,"Sent","Jun 30"],
+      ["CO-002","Basement wet bar rough-in",7600,"Approved","Jun 2"]
+    ],
+    logs: [
+      ["Jul 1","Plumbing top-out ~80%; gas line for CO-003 patio run. Electricians staged for Monday. 92° — afternoon heat slowed crew.",""],
+      ["Jun 30","Siding north + east elevations complete. Masonry veneer starts Thursday. Windows punch: 2 screens backordered.",""],
+      ["Jun 27","HVAC rough passed contractor pre-walk. Trunk relocated in bonus room — framing chase added, no charge.",""]
+    ]
+  },
+  {
+    slug: "maple-5th",
+    name: "Maple & 5th",
+    client: "R. Okafor",
+    address: "1108 Maple St",
+    status: "Presale",
+    contractType: "Cost Plus (18%)",
+    contract: 968000,
+    jrt: 968000,
+    currentDay: 9,
+    scheduleDelta: 0,
+    nextMilestone: { name: "Building permit issued", day: 35 },
+    phase: 0,
+    tasks: [
+      [1,"Final plans, specs, engineering",15,[],0,null,60],
+      [2,"Contract signed",0,["1"],0,null,0],
+      [3,"Permit application and review",20,["2"],0,null,0],
+      [4,"Survey and stake lot",2,["2"],0,null,0],
+      [5,"Order long-lead items",1,["2"],0,null,0],
+      [6,"MILESTONE: Building permit issued",0,["3"],0,null,0],
+      [7,"Sitework & foundation (phase)",21,["6"],1,null,0],
+      [17,"MILESTONE: Foundation complete (draw)",0,["7"],1,null,0],
+      [18,"Framing & dry-in (phase)",26,["17"],2,null,0],
+      [25,"MILESTONE: Dried-in (draw)",0,["18"],2,null,0],
+      [26,"Rough-ins (phase)",15,["25"],3,null,0],
+      [34,"MILESTONE: Rough inspections passed",0,["26"],3,null,0],
+      [35,"Insulation & drywall (phase)",17,["34"],4,null,0],
+      [40,"MILESTONE: Drywall complete (draw)",0,["35"],4,null,0],
+      [41,"Interior finishes (phase)",33,["40"],5,null,0],
+      [54,"Exterior completion (phase)",10,["34"],6,null,0],
+      [58,"Completion & closing (phase)",12,["41","54"],7,null,0],
+      [64,"MILESTONE: Closing (final draw)",0,["58"],7,null,0]
+    ],
+    budget: [
+      ["1000 Preliminaries", 41200, 41200, 8400, 8400],
+      ["2000 Excavation & Foundation", 92000, 92000, 0, 0],
+      ["3000 Rough Structure", 214000, 214000, 0, 0],
+      ["4000 Full Enclosure", 129000, 129000, 0, 0],
+      ["5000 Finishing Trades", 241000, 241000, 0, 0],
+      ["6000 Completion", 56000, 56000, 0, 0]
+    ],
+    selections: [
+      ["Windows package","Whole house",42000,null,16,"Pending"],
+      ["Exterior stone + siding colors","Exterior",0,null,30,"Pending"],
+      ["Front door","Entry",4500,null,30,"Pending"]
+    ],
+    changeOrders: [],
+    logs: [
+      ["Jul 1","Engineering review call — truss layout revision back from supplier Thursday.",""],
+      ["Jun 26","Met clients at lot; staked rough corners with surveyor. Septic perc scheduled.",""]
+    ]
+  }
+];
+/* ============================== end DATA ============================== */
+
+const $ = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstChild; };
+const money = (n) => (n < 0 ? "−$" : "$") + Math.abs(Math.round(n)).toLocaleString();
+const moneyK = (n) => (n < 0 ? "−$" : "$") + (Math.abs(n) >= 1e6 ? (Math.abs(n)/1e6).toFixed(2) + "M" : Math.round(Math.abs(n)/1000) + "K");
+const esc = (s) => { const d = document.createElement("span"); d.textContent = s; return d.innerHTML; };
+
+function schedule(job) {
+  const byId = {};
+  for (const [id, name, dur, preds, ph, ov, pct] of job.tasks) {
+    let start = 0;
+    for (const p of preds) {
+      const m = p.match(/^(\d+)(SS)?(?:\+(\d+))?$/);
+      const pred = byId[m[1]]; if (!pred) continue;
+      start = Math.max(start, (m[2] === "SS" ? pred.start : pred.end) + (m[3] ? +m[3] : 0));
+    }
+    if (ov != null) start = ov;
+    byId[id] = { id, name, dur, preds, ph, start, end: start + dur, pct: pct || 0 };
+  }
+  const tasks = Object.values(byId);
+  return { tasks, total: Math.max(...tasks.map(t => t.end)) };
+}
+
+function jobStats(job) {
+  const { tasks, total } = schedule(job);
+  const est = job.budget.reduce((s, r) => s + r[1], 0);
+  const revised = job.budget.reduce((s, r) => s + r[2], 0);
+  const actual = job.budget.reduce((s, r) => s + r[4 - 1], 0); // committed col idx 3
+  const spent = job.budget.reduce((s, r) => s + r[4], 0);
+  const done = tasks.filter(t => t.dur > 0 && t.pct === 100).reduce((s,t) => s + t.dur, 0);
+  const workdays = tasks.filter(t => t.dur > 0).reduce((s,t) => s + t.dur, 0);
+  const selDue = job.selections.filter(s => s[5] === "Pending" && s[4] - job.currentDay <= 14).length;
+  const openCOs = job.changeOrders.filter(c => c[3] === "Sent").length;
+  return { total, est, revised, spent, committed: actual, pctDone: Math.round(done / workdays * 100), selDue, openCOs };
+}
+
+/* ---------------- views ---------------- */
+function homeView() {
+  const app = document.getElementById("app");
+  app.replaceChildren();
+  app.append($(`<header class="top"><span class="wordmark">KH<span class="slash"> /</span> JOB HUB</span>
+    <span class="sheetno">${esc(GENERATED)}</span></header>`));
+
+  const stats = JOBS.map(jobStats);
+  const active = JOBS.filter(j => j.status !== "Closed").length;
+  const behind = JOBS.filter(j => j.scheduleDelta < 0).length;
+  const selDue = stats.reduce((s, x) => s + x.selDue, 0);
+  const varTotal = JOBS.reduce((s, j) => s + (jobStats(j).revised - jobStats(j).est), 0);
+
+  app.append($(`<div class="eyebrow">Portfolio</div>`));
+  const tiles = $(`<div class="tiles"></div>`);
+  tiles.append(
+    $(`<div class="tile"><div class="t-label">Active jobs</div><div class="t-value">${active}</div>
+       <div class="t-sub">${JOBS.map(j=>esc(j.name)).join(" · ")}</div></div>`),
+    $(`<div class="tile"><div class="t-label">Schedule</div><div class="t-value">${behind ? behind + " behind" : "On track"}</div>
+       <div class="t-sub">vs locked baselines</div></div>`),
+    $(`<div class="tile"><div class="t-label">Selections due ≤ 2 wks</div><div class="t-value">${selDue}</div>
+       <div class="t-sub">across all jobs</div></div>`),
+    $(`<div class="tile"><div class="t-label">Revised vs estimate</div>
+       <div class="t-value" style="color:${varTotal>0?"var(--warn)":"var(--good-text)"}">${moneyK(varTotal)}</div>
+       <div class="t-sub">approved COs + overages</div></div>`)
+  );
+  app.append(tiles);
+
+  app.append($(`<div class="eyebrow">Jobs</div>`));
+  JOBS.forEach((job, i) => {
+    const s = jobStats(job);
+    const behindChip = job.scheduleDelta < 0
+      ? `<span class="chip crit">${-job.scheduleDelta}d behind</span>`
+      : `<span class="chip ok">On schedule</span>`;
+    const sel = s.selDue ? `<span class="chip warn">${s.selDue} selection${s.selDue>1?"s":""} due</span>` : "";
+    const cos = s.openCOs ? `<span class="chip">${s.openCOs} CO awaiting client</span>` : "";
+    const card = $(`<a class="jobcard" href="#/job/${job.slug}/schedule" style="--jc: var(--p${job.phase})">
+      <div class="jc-head"><span class="jc-name">${esc(job.name)}</span>
+        <span class="jc-client">${esc(job.client)}</span></div>
+      <div class="chips"><span class="chip" style="color:var(--ink)">${esc(PHASE_NAMES[job.phase])}</span>
+        ${behindChip}${sel}${cos}</div>
+      <div class="meter"><div class="fill" style="width:${s.pctDone}%"></div></div>
+      <div class="jc-next"><b>${s.pctDone}%</b> of scheduled work complete · next milestone:
+        <b>${esc(job.nextMilestone.name)}</b> ~wk ${Math.ceil(job.nextMilestone.day/5)}</div>
+    </a>`);
+    app.append(card);
+  });
+
+  app.append($(`<div class="samplenote"><b>Sample data.</b> Ask Claude to “refresh the Job Hub” and this
+    page is rebuilt from the live job files in the KH vault (Jobs/&lt;name&gt;/schedule.md, budget.md,
+    selections.md…) and redeployed to this same address.</div>`));
+}
+
+function jobView(slug, tab) {
+  const job = JOBS.find(j => j.slug === slug);
+  if (!job) return homeView();
+  const app = document.getElementById("app");
+  app.replaceChildren();
+  const s = jobStats(job);
+
+  app.append($(`<header class="top"><a class="back" href="#/">‹ Jobs</a>
+    <span class="sheetno">${esc(job.status)} · ${esc(job.contractType)}</span></header>`));
+  app.append($(`<div><div class="jobtitle">${esc(job.name)}</div>
+    <div class="jobmeta">${esc(job.address)} · ${esc(job.client)}</div></div>`));
+
+  const deltaCls = job.scheduleDelta < 0 ? "crit" : "ok";
+  const margin = job.jrt - s.revised;
+  const grid = $(`<div class="statgrid"></div>`);
+  grid.append(
+    $(`<div class="stat"><div class="s-label">Schedule</div>
+        <div class="s-value ${deltaCls}">${job.scheduleDelta < 0 ? -job.scheduleDelta + "d behind" : "on time"}</div></div>`),
+    $(`<div class="stat"><div class="s-label">Running total</div><div class="s-value">${moneyK(job.jrt)}</div></div>`),
+    $(`<div class="stat"><div class="s-label">Proj. margin</div>
+        <div class="s-value ${margin >= 0 ? "" : "crit"}">${moneyK(margin)}</div></div>`)
+  );
+  app.append(grid);
+
+  const body = $(`<div></div>`);
+  app.append(body);
+  if (tab === "budget") budgetTab(body, job);
+  else if (tab === "selections") selectionsTab(body, job);
+  else if (tab === "activity") activityTab(body, job);
+  else scheduleTab(body, job);
+
+  const tabs = $(`<nav class="tabs"></nav>`);
+  for (const [key, glyph, label] of [["schedule","▦","Schedule"],["budget","Σ","Budget"],
+      ["selections","✓","Selections"],["activity","≡","Activity"]]) {
+    tabs.append($(`<a href="#/job/${job.slug}/${key}" class="${tab === key ? "active" : ""}">
+      <span class="glyph">${glyph}</span>${label}</a>`));
+  }
+  app.append(tabs);
+}
+
+function scheduleTab(root, job) {
+  const { tasks, total } = schedule(job);
+  root.append($(`<div class="eyebrow">Schedule · working day ${job.currentDay} of ${total}</div>`));
+  const g = $(`<div class="gantt"></div>`);
+  const pct = d => (d / total * 100) + "%";
+
+  // axis
+  const labelStep = Math.max(20, Math.ceil(total / 4 / 20) * 20);
+  const axis = $(`<div class="g-axis"></div>`);
+  for (let d = labelStep; d < total; d += labelStep)
+    axis.append($(`<span style="left:${pct(d)}">Wk ${d/5}</span>`));
+  g.append($(`<div class="g-axis-spacer"></div>`), axis);
+
+  const gridlines = (plot) => {
+    for (let d = 10; d < total; d += 10)
+      plot.append($(`<div class="g-grid" style="left:${pct(d)}"></div>`));
+    if (job.currentDay > 0 && job.currentDay < total)
+      plot.append($(`<div class="g-today" style="left:${pct(job.currentDay)}"></div>`));
+  };
+
+  let ph = -1;
+  for (const t of tasks) {
+    if (t.ph !== ph) {
+      ph = t.ph;
+      const phTasks = tasks.filter(x => x.ph === ph);
+      const s0 = Math.min(...phTasks.map(x => x.start)), e0 = Math.max(...phTasks.map(x => x.end));
+      const lab = $(`<div class="g-lab phase"><span>${esc(PHASE_NAMES[ph])}</span></div>`);
+      const plot = $(`<div class="g-plot phase"></div>`);
+      gridlines(plot);
+      plot.append($(`<div class="g-span" style="left:${pct(s0)};width:${pct(e0-s0)};background:var(--p${ph})"></div>`));
+      g.append(lab, plot);
+    }
+    const lab = $(`<div class="g-lab"><span>${esc(t.name.replace("MILESTONE: ",""))}</span></div>`);
+    if (t.dur === 0) lab.firstChild.style.fontWeight = 650;
+    const plot = $(`<div class="g-plot"></div>`);
+    gridlines(plot);
+    if (t.dur === 0) plot.append($(`<div class="g-diamond" style="left:${pct(t.start)}"></div>`));
+    else plot.append($(`<div class="g-bar ${t.pct === 100 ? "done" : ""}"
+      style="left:${pct(t.start)};width:max(calc(${pct(t.dur)} - 2px),3px);background:var(--p${t.ph})"></div>`));
+    g.append(lab, plot);
+  }
+  root.append(g);
+  root.append($(`<div class="legend-note">Red line = today (wd ${job.currentDay}). Faded bars are complete.
+    ◆ milestones mark the draw schedule.</div>`));
+}
+
+function budgetTab(root, job) {
+  root.append($(`<div class="eyebrow">Budget by division</div>`));
+  const card = $(`<div class="tablecard"></div>`);
+  const table = $(`<table><tr><th>Division</th><th class="num">Revised</th><th class="num">Actual</th><th class="num">Var.</th></tr></table>`);
+  let tE = 0, tR = 0, tC = 0, tA = 0;
+  for (const [name, est, revised, committed, actual] of job.budget) {
+    tE += est; tR += revised; tC += committed; tA += actual;
+    const v = revised - Math.max(committed, actual);
+    const settled = actual >= committed && committed > 0 && actual > 0;
+    const varTxt = committed === 0 ? "—" :
+      `<span class="${(settled ? revised - actual : v) >= 0 ? "pos" : "neg"}">${money(settled ? revised - actual : v)}</span>`;
+    table.append($(`<tr><td>${esc(name)}${est !== revised ? `<span class="sub">est. ${money(est)} → revised</span>` : ""}</td>
+      <td class="num">${money(revised)}</td><td class="num">${actual ? money(actual) : "—"}</td>
+      <td class="num">${varTxt}</td></tr>`));
+  }
+  table.append($(`<tr><td><b>Total</b><span class="sub">committed ${money(tC)}</span></td>
+    <td class="num"><b>${money(tR)}</b></td><td class="num"><b>${money(tA)}</b></td>
+    <td class="num"><b class="${tR - tC >= 0 ? "pos" : "neg"}">${money(tR - tC)}</b></td></tr>`));
+  card.append(table);
+  root.append(card);
+  root.append($(`<div class="legend-note">Var. = revised budget minus committed/actual, per division.
+    Revised = estimate + approved change orders + selection overages.</div>`));
+}
+
+function selectionsTab(root, job) {
+  root.append($(`<div class="eyebrow">Selections & allowances</div>`));
+  const card = $(`<div class="rowcard"></div>`);
+  const rows = [...job.selections].sort((a, b) =>
+    (a[5] === "Pending" ? 0 : 1) - (b[5] === "Pending" ? 0 : 1) || a[4] - b[4]);
+  for (const [item, room, allowance, price, deadline, status] of rows) {
+    const daysLeft = deadline - job.currentDay;
+    let chip;
+    if (status !== "Pending") chip = `<span class="duechip done">decided</span>`;
+    else if (daysLeft < 0) chip = `<span class="duechip late">${-daysLeft}d late</span>`;
+    else if (daysLeft <= 14) chip = `<span class="duechip soon">due in ${daysLeft}d</span>`;
+    else chip = `<span class="duechip ok">wk ${Math.ceil(deadline/5)}</span>`;
+    const delta = price != null && allowance > 0 ? price - allowance : null;
+    const val = status === "Pending"
+      ? (allowance ? "allow. " + moneyK(allowance) : "no allowance")
+      : delta == null || delta === 0 ? "at allowance"
+      : `<span class="${delta > 0 ? "neg" : "pos"}">${delta > 0 ? "+" : ""}${money(delta)} vs allow.</span>`;
+    card.append($(`<div class="lrow"><div class="l-main"><div class="l-title">${esc(item)}</div>
+      <div class="l-sub">${esc(room)}</div></div>
+      <div class="l-side"><div class="l-val">${val}</div><div class="l-when">${chip}</div></div></div>`));
+  }
+  root.append(card);
+  root.append($(`<div class="legend-note">Deadlines are tied to schedule tasks and move when the
+    schedule shifts. Overages roll into the budget and next draw.</div>`));
+}
+
+function activityTab(root, job) {
+  if (job.changeOrders.length) {
+    root.append($(`<div class="eyebrow">Change orders</div>`));
+    const card = $(`<div class="rowcard"></div>`);
+    for (const [no, title, amt, status, date] of job.changeOrders) {
+      const chip = status === "Approved" ? `<span class="duechip ok">approved</span>`
+        : status === "Sent" ? `<span class="duechip soon">awaiting client</span>`
+        : `<span class="duechip done">${esc(status.toLowerCase())}</span>`;
+      card.append($(`<div class="lrow"><div class="l-main"><div class="l-title">${esc(no)} · ${esc(title)}</div>
+        <div class="l-sub">${esc(date)}</div></div>
+        <div class="l-side"><div class="l-val">${money(amt)}</div><div class="l-when">${chip}</div></div></div>`));
+    }
+    root.append(card);
+  }
+  root.append($(`<div class="eyebrow">Recent daily logs</div>`));
+  const card = $(`<div class="rowcard"></div>`);
+  for (const [date, note] of job.logs) {
+    card.append($(`<div class="lrow"><div class="l-main"><div class="l-title">${esc(date)}</div>
+      <div class="l-sub">${esc(note)}</div></div></div>`));
+  }
+  root.append(card);
+}
+
+/* ---------------- router ---------------- */
+function route() {
+  const h = location.hash || "#/";
+  const m = h.match(/^#\/job\/([^/]+)\/?([^/]*)/);
+  if (m) jobView(m[1], m[2] || "schedule");
+  else homeView();
+  window.scrollTo(0, 0);
+}
+addEventListener("hashchange", route);
+route();
+</script>

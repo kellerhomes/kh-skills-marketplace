@@ -103,6 +103,23 @@ to their actual position with the startOverride field. Save it as
 OneDrive) and send it to the user rendered. Works on phones — it's a
 standalone HTML file, dark-mode aware, tappable rows.
 
+### Job Hub app ("refresh the job hub / update my app")
+The KH Job Hub is a phone-installable web app deployed as a private Claude
+Artifact at:
+
+`https://claude.ai/code/artifact/dc72da42-256d-4488-b358-7b801dd7a49e`
+
+To refresh it: copy `references/jobhub-template.html`, rebuild the DATA block
+(`GENERATED`, `JOBS`) from every active job's files — schedule tasks with
+percent-complete and start overrides for in-progress work, budget divisions
+(estimate/revised/committed/actual), selections with deadlines in working
+days, change orders, the 2–3 latest daily logs, current working day, and
+schedule delta vs. baseline — then redeploy with the Artifact tool passing
+that same `url` so the user's home-screen icon keeps working (keep favicon
+🏗️ and the `<title>` unchanged). Dollar figures come from the job files
+only; never estimate them. Refresh after meaningful job events or whenever
+asked.
+
 ### Status report ("how are my jobs doing")
 Read every active job's `job.md`, `schedule.md`, `budget.md`, and latest
 daily log. Report per job: phase, schedule vs. baseline, budget variance,
