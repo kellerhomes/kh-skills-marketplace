@@ -120,6 +120,18 @@ that same `url` so the user's home-screen icon keeps working (keep favicon
 only; never estimate them. Refresh after meaningful job events or whenever
 asked.
 
+**Server mode (preferred when reachable):** the app also runs on the KH
+server from `references/../server/` (see `server/README.md`) — it serves
+`jobs.json` live and stores everyone's drag/drop schedule edits in
+`edits.json`. When the server folder is reachable (it should live in the
+OneDrive KH folder, e.g. `KH/jobhub/`), refresh by updating **jobs.json**
+(same JOBS format) instead of redeploying the artifact — the app picks it up
+on next load. To make field edits permanent, fold `edits.json` into
+`jobs.json` (apply each task's `start`/`dur` override, keep `predBroken`
+semantics: that trade no longer follows its predecessor) and clear
+`edits.json`. Update the artifact too when asked — it's the away-from-network
+fallback.
+
 ### Status report ("how are my jobs doing")
 Read every active job's `job.md`, `schedule.md`, `budget.md`, and latest
 daily log. Report per job: phase, schedule vs. baseline, budget variance,
