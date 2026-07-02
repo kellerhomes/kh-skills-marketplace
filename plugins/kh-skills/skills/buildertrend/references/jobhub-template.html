@@ -201,14 +201,22 @@
   }
   .samplenote b { color: var(--ink-2); }
   /* ---------- buildertrend-style gantt ---------- */
-  .btg { background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
-    overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .btg { background: var(--card); border-block: 1px solid var(--hairline);
+    overflow: auto; -webkit-overflow-scrolling: touch;
+    margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);
+    height: calc(100dvh - 330px); min-height: 340px; }
   .btg-canvas { position: relative; }
-  .btg-months { position: relative; height: 22px; border-bottom: 1px solid var(--line); }
+  .btg-months { position: sticky; top: 0; z-index: 4; background: var(--card);
+    height: 22px; border-bottom: 1px solid var(--line); }
   .btg-month { position: absolute; top: 0; height: 22px; font-size: 10.5px; font-weight: 600;
     color: var(--ink-2); padding: 4px 0 0 6px; border-left: 1px solid var(--line);
     white-space: nowrap; overflow: hidden; }
-  .btg-days { position: relative; height: 16px; border-bottom: 1px solid var(--line); }
+  .btg-days { position: sticky; top: 22px; z-index: 4; background: var(--card);
+    height: 16px; border-bottom: 1px solid var(--line); }
+  .btg-corner { position: sticky; left: 0; z-index: 2; width: 150px; height: 100%;
+    background: var(--card); border-right: 1px solid var(--line);
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+    display: flex; align-items: center; padding-left: 10px; }
   .btg-day { position: absolute; top: 1px; width: 16px; text-align: center; font-size: 8.5px;
     color: var(--ink-3); font-variant-numeric: tabular-nums; }
   .btg-rows { position: relative; }
@@ -564,7 +572,7 @@ function jobView(slug, tab) {
 
 // ---------- Buildertrend-style editable gantt ----------
 const DAYW = 16, LEFTW = 150, EDITS_KEY = "khjobhub-edits-v1";
-let SEL = null, CASCADE = true, SCROLLX = null;
+let SEL = null, CASCADE = true, SCROLLX = null, SCROLLY = null;
 let SERVER = false, EDITS = null;
 function loadEdits() {
   if (SERVER) return EDITS || {};
@@ -651,11 +659,15 @@ function scheduleTab(root, job) {
       mStart = c;
     }
   }
+  months.prepend($(`<div class="btg-corner">Trade</div>`));
   canvas.append(months);
-  // day numbers
+  // day numbers (today highlighted red so the date is visible while scrolling)
   const days = $(`<div class="btg-days"></div>`);
-  for (let c = 0; c <= M.calTotal; c++)
-    days.append($(`<div class="btg-day" style="left:${LEFTW + c*DAYW}px">${M.calDate[c].getDate()}</div>`));
+  for (let c = 0; c <= M.calTotal; c++) {
+    const isToday = c === M.wd2cal[job.currentDay];
+    days.append($(`<div class="btg-day" style="left:${LEFTW + c*DAYW}px${isToday ? ";color:var(--crit);font-weight:700" : ""}">${M.calDate[c].getDate()}</div>`));
+  }
+  days.prepend($(`<div class="btg-corner"></div>`));
   canvas.append(days);
 
   // rows with weekend shading
@@ -670,7 +682,7 @@ function scheduleTab(root, job) {
     const name = t.name.replace("MILESTONE: ", "");
     const left = $(`<div class="btg-left"><div class="btg-title">${esc(name)}</div>
       <div class="btg-sub">${esc(fmtDay(job, t.start, true))}${t.dur ? " · " + t.dur + "d" : ""}</div></div>`);
-    left.addEventListener("click", () => { SEL = SEL === t.id ? null : t.id; SCROLLX = wrap.scrollLeft; route(); });
+    left.addEventListener("click", () => { SEL = SEL === t.id ? null : t.id; SCROLLX = wrap.scrollLeft; SCROLLY = wrap.scrollTop; route(); });
     row.append(left);
     const calS = M.wd2cal[t.start];
     let mark, right;
@@ -684,7 +696,7 @@ function scheduleTab(root, job) {
       right = LEFTW + calE*DAYW;
     }
     if (SEL !== t.id) {
-      mark.addEventListener("click", () => { SEL = t.id; SCROLLX = wrap.scrollLeft; route(); });
+      mark.addEventListener("click", () => { SEL = t.id; SCROLLX = wrap.scrollLeft; SCROLLY = wrap.scrollTop; route(); });
     } else {
       // drag to move (selected only, so page panning still works elsewhere)
       let sx = null, dx = 0, moved = false;
@@ -702,7 +714,7 @@ function scheduleTab(root, job) {
         if (sx == null) return;
         const dCal = Math.round(dx / DAYW); sx = null;
         mark.classList.remove("dragging"); mark.style.transform = "";
-        if (!moved) { SEL = null; SCROLLX = wrap.scrollLeft; route(); return; }
+        if (!moved) { SEL = null; SCROLLX = wrap.scrollLeft; SCROLLY = wrap.scrollTop; route(); return; }
         if (!dCal) return;
         let target = Math.max(0, Math.min(M.calTotal, M.wd2cal[t.start] + dCal));
         let wdNew = -1;
@@ -710,7 +722,7 @@ function scheduleTab(root, job) {
           if (M.calWd[target + k] >= 0) wdNew = M.calWd[target + k];
           else if (target - k >= 0 && M.calWd[target - k] >= 0) wdNew = M.calWd[target - k];
         }
-        SCROLLX = wrap.scrollLeft;
+        SCROLLX = wrap.scrollLeft; SCROLLY = wrap.scrollTop;
         if (wdNew >= 0) moveBy(t, wdNew - t.start);
       };
       mark.addEventListener("pointerup", drop);
@@ -721,9 +733,7 @@ function scheduleTab(root, job) {
     rows.append(row);
   }
   if (todayCal != null) {
-    const tl = $(`<div class="btg-today" style="left:${LEFTW + todayCal*DAYW + DAYW/2}px"></div>`);
-    tl.append($(`<div class="btg-todaycap">TODAY</div>`));
-    rows.append(tl);
+    rows.append($(`<div class="btg-today" style="left:${LEFTW + todayCal*DAYW + DAYW/2}px"></div>`));
   }
   canvas.append(rows);
   wrap.append(canvas);
@@ -770,7 +780,8 @@ function scheduleTab(root, job) {
                       : "Follows “" + esc(t.pred.name.replace("MILESTONE: ","")) + "”")
       : "No predecessor"} · ${nLinked} linked trade${nLinked===1?"":"s"} after</div>`));
     const btn = (label, fn, cls) => { const b = $(`<button class="${cls||""}">${label}</button>`);
-      b.addEventListener("click", () => { const g = document.querySelector(".btg"); if (g) SCROLLX = g.scrollLeft; fn(); }); return b; };
+      b.addEventListener("click", () => { const g = document.querySelector(".btg");
+        if (g) { SCROLLX = g.scrollLeft; SCROLLY = g.scrollTop; } fn(); }); return b; };
     const r1 = $(`<div class="sh-row"></div>`);
     r1.append(
       btn("◀ 1d", () => moveBy(t, -1)),
@@ -803,11 +814,13 @@ function scheduleTab(root, job) {
     root.append(sheet);
   }
 
-  // restore scroll (or bring today into view on first open)
+  // restore scroll (or bring today + the active trades into view on first open)
+  const firstActive = Math.max(0, tasks.findIndex(t => t.pct < 100));
   requestAnimationFrame(() => {
     wrap.scrollLeft = SCROLLX != null ? SCROLLX
       : Math.max(0, LEFTW + (todayCal || 0) * DAYW - wrap.clientWidth * 0.55);
-    SCROLLX = null;
+    wrap.scrollTop = SCROLLY != null ? SCROLLY : Math.max(0, firstActive * 26 - 90);
+    SCROLLX = null; SCROLLY = null;
   });
 }
 
