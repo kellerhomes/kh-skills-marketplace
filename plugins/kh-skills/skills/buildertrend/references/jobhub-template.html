@@ -263,6 +263,12 @@
   .sheet .sh-x { margin-left: auto; }
   .sheet label.casc { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
     color: var(--ink-2); margin-left: 2px; }
+  .addbtn { margin-left: auto; font: inherit; font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent);
+    background: var(--card); border: 1px solid var(--line); border-radius: 7px;
+    padding: 4px 9px; cursor: pointer; }
+  .sh-in { font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--ground); color: var(--ink); min-width: 0; }
   .changesbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 12px;
     color: var(--ink-2); flex-wrap: wrap; }
   .changesbar button { font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line);
@@ -412,7 +418,7 @@ let JOBS = [
 ];
 /* ============================== end DATA ============================== */
 
-const BUILD = 8; // bump on every app change — shown in the header
+const BUILD = 9; // bump on every app change — shown in the header
 const $ = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstChild; };
 const money = (n) => (n < 0 ? "−$" : "$") + Math.abs(Math.round(n)).toLocaleString();
 const moneyK = (n) => (n < 0 ? "−$" : "$") + (Math.abs(n) >= 1e6 ? (Math.abs(n)/1e6).toFixed(2) + "M" : Math.round(Math.abs(n)/1000) + "K");
@@ -451,16 +457,16 @@ function schedule(job) {
 
 function jobStats(job) {
   const { tasks, total } = schedule(job);
-  const est = job.budget.reduce((s, r) => s + r[1], 0);
-  const revised = job.budget.reduce((s, r) => s + r[2], 0);
-  const actual = job.budget.reduce((s, r) => s + r[4 - 1], 0); // committed col idx 3
-  const spent = job.budget.reduce((s, r) => s + r[4], 0);
+  // budget rows follow the master sworn statement: [description, contractor, contract, paid]
+  const contract = job.budget.reduce((s, r) => s + (r[2] || 0), 0);
+  const paid = job.budget.reduce((s, r) => s + (r[3] || 0), 0);
+  const est = contract, revised = contract, actual = paid, spent = paid;
   const done = tasks.filter(t => t.dur > 0 && t.pct === 100).reduce((s,t) => s + t.dur, 0)
     + tasks.filter(t => t.dur > 0 && t.pct > 0 && t.pct < 100).reduce((s,t) => s + t.dur * t.pct / 100, 0);
   const workdays = tasks.filter(t => t.dur > 0).reduce((s,t) => s + t.dur, 0);
   const selDue = job.selections.filter(s => s[5] === "Pending" && s[4] - job.currentDay <= 14).length;
   const openCOs = job.changeOrders.filter(c => c[3] === "Sent").length;
-  return { total, est, revised, spent, committed: actual,
+  return { total, est, revised, spent, committed: actual, contract, paid,
     pctDone: workdays ? Math.round(done / workdays * 100) : 0, selDue, openCOs };
 }
 
@@ -476,7 +482,8 @@ function homeView() {
   const behind = JOBS.filter(j => j.scheduleDelta < 0).length;
   const selDue = stats.reduce((s, x) => s + x.selDue, 0);
   const hasBudgets = JOBS.some(j => j.budget.length);
-  const varTotal = stats.reduce((s, x) => s + (x.revised - x.est), 0);
+  const swornTotal = stats.reduce((s, x) => s + x.contract, 0);
+  const paidTotal = stats.reduce((s, x) => s + x.paid, 0);
 
   app.append($(`<div class="eyebrow">Portfolio</div>`));
   const tiles = $(`<div class="tiles"></div>`);
@@ -488,11 +495,11 @@ function homeView() {
     $(`<div class="tile"><div class="t-label">Selections due ≤ 2 wks</div><div class="t-value">${selDue}</div>
        <div class="t-sub">across all jobs</div></div>`),
     hasBudgets
-      ? $(`<div class="tile"><div class="t-label">Revised vs estimate</div>
-         <div class="t-value" style="color:${varTotal>0?"var(--warn)":"var(--good-text)"}">${moneyK(varTotal)}</div>
-         <div class="t-sub">approved COs + overages</div></div>`)
-      : $(`<div class="tile"><div class="t-label">Budgets</div><div class="t-value">—</div>
-         <div class="t-sub">no budget files loaded yet</div></div>`)
+      ? $(`<div class="tile"><div class="t-label">Sworn contracts</div>
+         <div class="t-value">${moneyK(swornTotal)}</div>
+         <div class="t-sub">paid to date ${moneyK(paidTotal)}</div></div>`)
+      : $(`<div class="tile"><div class="t-label">Sworn statements</div><div class="t-value">—</div>
+         <div class="t-sub">not loaded yet</div></div>`)
   );
   app.append(tiles);
 
@@ -546,6 +553,11 @@ function jobView(slug, tab) {
       $(`<div class="stat"><div class="s-label">Proj. margin</div>
           <div class="s-value ${margin >= 0 ? "" : "crit"}">${moneyK(margin)}</div></div>`)
     );
+  } else if (job.budget.length) {
+    grid.append(
+      $(`<div class="stat"><div class="s-label">Sworn total</div><div class="s-value">${moneyK(s.contract)}</div></div>`),
+      $(`<div class="stat"><div class="s-label">Paid to date</div><div class="s-value">${moneyK(s.paid)}</div></div>`)
+    );
   } else {
     grid.append(
       $(`<div class="stat"><div class="s-label">Complete</div><div class="s-value">${s.pctDone}%</div></div>`),
@@ -573,7 +585,7 @@ function jobView(slug, tab) {
 
 // ---------- Buildertrend-style editable gantt ----------
 const DAYW = 16, LEFTW = 150, EDITS_KEY = "khjobhub-edits-v1";
-let SEL = null, CASCADE = true, SCROLLX = null, SCROLLY = null;
+let SEL = null, CASCADE = true, SCROLLX = null, SCROLLY = null, ADDING = false;
 let SERVER = false, EDITS = null;
 function loadEdits() {
   if (SERVER) return EDITS || {};
@@ -606,14 +618,23 @@ function calMaps(job, maxWd) {
 function scheduleTab(root, job) {
   const allEdits = loadEdits(), edits = allEdits[job.slug] || {};
   const base = schedule(job).tasks;
+  const addedItems = (edits._added || []).map(a => {
+    const e = edits[a.id] || {};
+    const start = e.start != null ? e.start : a.start;
+    const dur = e.dur != null ? e.dur : a.dur;
+    return { id: a.id, name: a.name, dur, ph: a.ph, preds: [], pct: 0,
+      start, end: start + dur, baseStart: a.start, baseDur: a.dur,
+      predBroken: !!e.predBroken, added: true };
+  });
   const tasks = base.map(t => {
     const e = edits[t.id] || {};
     const start = e.start != null ? e.start : t.start;
     const dur = e.dur != null ? e.dur : t.dur;
     return { ...t, start, dur, end: start + dur, baseStart: t.start, baseDur: t.dur,
       predBroken: !!e.predBroken };
-  }).sort((x, y) => x.start - y.start || x.id - y.id);
-  const totalWd = Math.max(...tasks.map(t => t.end), job.currentDay) + 8;
+  }).concat(addedItems)
+    .sort((x, y) => x.start - y.start || String(x.id).localeCompare(String(y.id)));
+  const totalWd = Math.max(...tasks.map(t => t.end), job.currentDay) + 25;
   const M = calMaps(job, totalWd);
 
   // inferred finish-to-start links: pred = latest-finishing trade that ends by my start
@@ -642,8 +663,17 @@ function scheduleTab(root, job) {
     mutate(list, (e, x) => { e.start = x.start + dWd; });
   };
 
-  root.append($(`<div class="eyebrow">Schedule · today ${esc(fmtDay(job, job.currentDay, true))}
-    · close ${esc(fmtDay(job, tasks[tasks.length-1].end, true))} · tap a trade, then drag or nudge</div>`));
+  const closeWd = Math.max(...tasks.map(t => t.end));
+  const eb = $(`<div class="eyebrow" style="display:flex;align-items:center;gap:8px"><span>Schedule
+    · today ${esc(fmtDay(job, job.currentDay, true))} · close ${esc(fmtDay(job, closeWd, true))}</span></div>`);
+  const addOpen = $(`<button class="addbtn">＋ Add item</button>`);
+  addOpen.addEventListener("click", () => {
+    const g = document.querySelector(".btg");
+    if (g) { SCROLLX = g.scrollLeft; SCROLLY = g.scrollTop; }
+    ADDING = true; SEL = null; route();
+  });
+  eb.append(addOpen);
+  root.append(eb);
 
   const wrap = $(`<div class="btg"></div>`);
   const W = LEFTW + (M.calTotal + 1) * DAYW;
@@ -741,16 +771,17 @@ function scheduleTab(root, job) {
   root.append(wrap);
 
   // changes bar
-  const changed = tasks.filter(t => t.start !== t.baseStart || t.dur !== t.baseDur || t.predBroken);
+  const changed = tasks.filter(t => t.added || t.start !== t.baseStart || t.dur !== t.baseDur || t.predBroken);
   if (changed.length) {
     const bar = $(`<div class="changesbar"><span><b>${changed.length}</b> ${SERVER ? "shared" : "local"} change${changed.length>1?"s":""}${SERVER ? " (everyone sees these)" : " on this device"}</span></div>`);
     const copyBtn = $(`<button>Copy for Claude</button>`);
     copyBtn.addEventListener("click", () => {
-      const txt = job.name + " schedule changes:\n" + changed.map(t =>
-        `- ${t.name.replace("MILESTONE: ","")}: ` +
-        (t.start !== t.baseStart ? `moved ${fmtDay(job, t.baseStart, true)} → ${fmtDay(job, t.start, true)}` : "") +
-        (t.dur !== t.baseDur ? ` duration ${t.baseDur}→${t.dur}d` : "") +
-        (t.predBroken ? " (link broken)" : "")).join("\n");
+      const txt = job.name + " schedule changes:\n" + changed.map(t => t.added
+        ? `- added "${t.name}": ${fmtDay(job, t.start, true)}, ${t.dur}d`
+        : `- ${t.name.replace("MILESTONE: ","")}: ` +
+          (t.start !== t.baseStart ? `moved ${fmtDay(job, t.baseStart, true)} → ${fmtDay(job, t.start, true)}` : "") +
+          (t.dur !== t.baseDur ? ` duration ${t.baseDur}→${t.dur}d` : "") +
+          (t.predBroken ? " (link broken)" : "")).join("\n");
       if (navigator.clipboard) navigator.clipboard.writeText(txt);
       copyBtn.textContent = "Copied ✓";
     });
@@ -805,6 +836,12 @@ function scheduleTab(root, job) {
         saveEdits(all); route(); })
     );
     const r2 = $(`<div class="sh-row"></div>`);
+    if (t.added) r2.append(btn("Delete", () => {
+      const all = loadEdits(); const e = all[job.slug] || {};
+      e._added = (e._added || []).filter(a => a.id !== t.id);
+      delete e[t.id];
+      saveEdits(all); SEL = null; route();
+    }, "danger"));
     if (t.pred) r2.append(btn(t.predBroken ? "Relink" : "Break link",
       () => mutate([t], e => { e.predBroken = !t.predBroken; }), "danger"));
     const casc = $(`<label class="casc"><input type="checkbox" ${CASCADE ? "checked" : ""}> move linked too</label>`);
@@ -813,6 +850,60 @@ function scheduleTab(root, job) {
     r2.append(btn("Done", () => { SEL = null; route(); }, "primary sh-x"));
     sheet.append(r1, r2);
     root.append(sheet);
+  }
+
+  // add-item form
+  if (ADDING) {
+    const d0 = wdDate(job, job.currentDay);
+    const iso = d0.getFullYear() + "-" + String(d0.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d0.getDate()).padStart(2, "0");
+    const sheet = $(`<div class="sheet"></div>`);
+    sheet.append($(`<div class="sh-head"><span class="sh-name">Add scheduled item</span></div>`));
+    const nameIn = $(`<input class="sh-in" placeholder="Item name (e.g. Shower glass install)" style="flex:1">`);
+    const dateIn = $(`<input class="sh-in" type="date" value="${iso}">`);
+    const daysIn = $(`<input class="sh-in" type="number" value="1" min="1" style="width:64px">`);
+    const r1 = $(`<div class="sh-row"></div>`); r1.append(nameIn);
+    const r2 = $(`<div class="sh-row"></div>`);
+    r2.append(dateIn, daysIn, $(`<span style="color:var(--ink-3);font-size:12px">workdays</span>`));
+    const r3 = $(`<div class="sh-row"></div>`);
+    const cancel = $(`<button>Cancel</button>`);
+    cancel.addEventListener("click", () => { ADDING = false; route(); });
+    const save = $(`<button class="primary sh-x">Add ✓</button>`);
+    save.addEventListener("click", () => {
+      const name = nameIn.value.trim();
+      if (!name) { nameIn.style.borderColor = "var(--crit)"; nameIn.focus(); return; }
+      const dur = Math.max(1, parseInt(daysIn.value, 10) || 1);
+      // date -> workday index (snap weekends forward, clamp to domain)
+      let wd = null;
+      const iso2 = dateIn.value;
+      const firstIso = M.calDate[0].toISOString().slice(0, 10);
+      if (iso2 <= firstIso) wd = 0;
+      else {
+        for (let c = 0; c <= M.calTotal && wd == null; c++) {
+          const d = M.calDate[c];
+          const s = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" +
+            String(d.getDate()).padStart(2, "0");
+          if (s === iso2) for (let k = c; k <= M.calTotal && wd == null; k++)
+            if (M.calWd[k] >= 0) wd = M.calWd[k];
+        }
+        if (wd == null) wd = totalWd - 1; // past the visible window — lands at the end
+      }
+      // phase = nearest existing trade's phase
+      let ph = 5, bestGap = Infinity;
+      for (const o of tasks) { const g = Math.abs(o.start - wd); if (g < bestGap) { bestGap = g; ph = o.ph; } }
+      const all = loadEdits(); const e = all[job.slug] = all[job.slug] || {};
+      const id = "a" + Date.now().toString(36);
+      (e._added = e._added || []).push({ id, name, dur, start: wd, ph });
+      saveEdits(all);
+      ADDING = false; SEL = id;
+      const g2 = document.querySelector(".btg");
+      if (g2) { SCROLLX = g2.scrollLeft; SCROLLY = g2.scrollTop; }
+      route();
+    });
+    r3.append(cancel, save);
+    sheet.append(r1, r2, r3);
+    root.append(sheet);
+    requestAnimationFrame(() => nameIn.focus());
   }
 
   // restore scroll (or bring today + the active trades into view on first open)
@@ -826,35 +917,32 @@ function scheduleTab(root, job) {
 }
 
 function budgetTab(root, job) {
-  root.append($(`<div class="eyebrow">Budget by division</div>`));
+  root.append($(`<div class="eyebrow">Budget · per master sworn statement</div>`));
   if (!job.budget.length) {
     root.append($(`<div class="rowcard"><div class="lrow"><div class="l-main">
-      <div class="l-title">No budget data yet</div>
-      <div class="l-sub">Add a budget.md to this job's folder in the KH vault (or give Claude the
-      numbers) and refresh the Job Hub — estimate, committed, actual, and variance land here.</div>
+      <div class="l-title">No sworn statement loaded</div>
+      <div class="l-sub">Upload the master sworn statement (PDF or Excel) to Claude and current
+      pricing lands here — contract amount, paid to date, and balance per trade.</div>
       </div></div></div>`));
     return;
   }
   const card = $(`<div class="tablecard"></div>`);
-  const table = $(`<table><tr><th>Division</th><th class="num">Revised</th><th class="num">Actual</th><th class="num">Var.</th></tr></table>`);
-  let tE = 0, tR = 0, tC = 0, tA = 0;
-  for (const [name, est, revised, committed, actual] of job.budget) {
-    tE += est; tR += revised; tC += committed; tA += actual;
-    const v = revised - Math.max(committed, actual);
-    const settled = actual >= committed && committed > 0 && actual > 0;
-    const varTxt = committed === 0 ? "—" :
-      `<span class="${(settled ? revised - actual : v) >= 0 ? "pos" : "neg"}">${money(settled ? revised - actual : v)}</span>`;
-    table.append($(`<tr><td>${esc(name)}${est !== revised ? `<span class="sub">est. ${money(est)} → revised</span>` : ""}</td>
-      <td class="num">${money(revised)}</td><td class="num">${actual ? money(actual) : "—"}</td>
-      <td class="num">${varTxt}</td></tr>`));
+  const table = $(`<table><tr><th>Trade / contractor</th><th class="num">Contract</th><th class="num">Paid</th><th class="num">Balance</th></tr></table>`);
+  let tC = 0, tP = 0;
+  for (const [desc, contractor, contract, paid] of job.budget) {
+    tC += contract || 0; tP += paid || 0;
+    const bal = (contract || 0) - (paid || 0);
+    table.append($(`<tr><td>${esc(desc)}${contractor ? `<span class="sub">${esc(contractor)}</span>` : ""}</td>
+      <td class="num">${money(contract || 0)}</td>
+      <td class="num">${paid ? money(paid) : "—"}</td>
+      <td class="num"><span class="${bal < 0 ? "neg" : ""}">${money(bal)}</span></td></tr>`));
   }
-  table.append($(`<tr><td><b>Total</b><span class="sub">committed ${money(tC)}</span></td>
-    <td class="num"><b>${money(tR)}</b></td><td class="num"><b>${money(tA)}</b></td>
-    <td class="num"><b class="${tR - tC >= 0 ? "pos" : "neg"}">${money(tR - tC)}</b></td></tr>`));
+  table.append($(`<tr><td><b>Total</b></td><td class="num"><b>${money(tC)}</b></td>
+    <td class="num"><b>${money(tP)}</b></td><td class="num"><b>${money(tC - tP)}</b></td></tr>`));
   card.append(table);
   root.append(card);
-  root.append($(`<div class="legend-note">Var. = revised budget minus committed/actual, per division.
-    Revised = estimate + approved change orders + selection overages.</div>`));
+  root.append($(`<div class="legend-note">Contract = current sworn amount including approved extras.
+    Balance = contract − paid to date. Update by giving Claude the latest sworn statement.</div>`));
 }
 
 function selectionsTab(root, job) {
