@@ -1,0 +1,1028 @@
+<!doctype html>
+<title>KH Job Hub</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    --ground: #f5f4ef;
+    --card: #fdfdfb;
+    --ink: #15171c;
+    --ink-2: #575b63;
+    --ink-3: #8b8e94;
+    --line: #e3e1d8;
+    --hairline: rgba(21,23,28,0.10);
+    --accent: #2450b8;
+    --accent-ink: #ffffff;
+    --good: #0ca30c; --good-text: #067006;
+    --warn: #b97e00;
+    --crit: #d03b3b;
+    --p0: #2a78d6; --p1: #1baf7a; --p2: #eda100; --p3: #008300;
+    --p4: #4a3aa7; --p5: #e34948; --p6: #e87ba4; --p7: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #111214;
+      --card: #1b1c1f;
+      --ink: #f2f2ef;
+      --ink-2: #b9bcc2;
+      --ink-3: #85888e;
+      --line: #2b2c2f;
+      --hairline: rgba(255,255,255,0.10);
+      --accent: #6f95e8;
+      --accent-ink: #0d1730;
+      --good: #0ca30c; --good-text: #4cc24c;
+      --warn: #e0a11c;
+      --crit: #e66767;
+      --p0: #3987e5; --p1: #199e70; --p2: #c98500; --p3: #008300;
+      --p4: #9085e9; --p5: #e66767; --p6: #d55181; --p7: #d95926;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px; line-height: 1.45;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #app { max-width: 640px; margin: 0 auto; padding: 0 14px 96px; }
+
+  /* ---------- title-block chrome ---------- */
+  header.top {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--ground);
+    padding: calc(10px + env(safe-area-inset-top)) 0 8px;
+    border-bottom: 1px solid var(--line);
+    margin: 0 0 14px;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .wordmark { font-weight: 700; font-size: 15px; letter-spacing: 0.14em; }
+  .wordmark .slash { color: var(--accent); }
+  .sheetno { margin-left: auto; font-size: 10.5px; letter-spacing: 0.12em;
+    color: var(--ink-3); text-transform: uppercase; font-variant-numeric: tabular-nums; }
+  .eyebrow {
+    font-size: 10.5px; letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--ink-3); margin: 22px 2px 8px; font-weight: 600;
+  }
+  .eyebrow:first-of-type { margin-top: 4px; }
+
+  a.back { color: var(--accent); text-decoration: none; font-size: 13.5px; font-weight: 600; }
+
+  /* ---------- tiles ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .tile {
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 10px;
+    padding: 12px 14px 11px;
+  }
+  .tile .t-label { font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em;
+    text-transform: uppercase; }
+  .tile .t-value { font-size: 24px; font-weight: 650; margin-top: 2px; }
+  .tile .t-sub { font-size: 12px; color: var(--ink-2); margin-top: 1px; }
+
+  /* ---------- job cards ---------- */
+  .jobcard {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 14px 16px 14px; margin-bottom: 10px;
+    border-left: 4px solid var(--jc, var(--accent));
+  }
+  .jobcard:active { filter: brightness(0.97); }
+  .jc-head { display: flex; align-items: baseline; gap: 8px; }
+  .jc-name { font-size: 17px; font-weight: 650; }
+  .jc-client { font-size: 12.5px; color: var(--ink-3); margin-left: auto; white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+    background: var(--ground); border: 1px solid var(--line); color: var(--ink-2);
+  }
+  .chip.ok   { color: var(--good-text); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .chip.crit { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 40%, transparent); }
+  .jc-next { font-size: 12.5px; color: var(--ink-2); margin-top: 9px; }
+  .jc-next b { font-weight: 600; color: var(--ink); }
+
+  /* progress meter */
+  .meter { height: 6px; border-radius: 3px; margin-top: 10px;
+    background: color-mix(in srgb, var(--jc, var(--accent)) 18%, transparent);
+    position: relative; overflow: hidden; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px;
+    background: var(--jc, var(--accent)); }
+
+  /* ---------- job screen ---------- */
+  .jobtitle { font-size: 21px; font-weight: 700; margin: 2px 0 1px; text-wrap: balance; }
+  .jobmeta { font-size: 12.5px; color: var(--ink-2); }
+  .statgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .stat { background: var(--card); border: 1px solid var(--hairline); border-radius: 10px;
+    padding: 9px 11px 8px; }
+  .stat .s-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .stat .s-value { font-size: 15.5px; font-weight: 650; margin-top: 1px; white-space: nowrap; }
+  .stat .s-value.ok { color: var(--good-text); }
+  .stat .s-value.warn { color: var(--warn); }
+  .stat .s-value.crit { color: var(--crit); }
+
+  /* ---------- tab bar ---------- */
+  nav.tabs {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 6;
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: center; gap: 2px;
+    padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+  }
+  nav.tabs a {
+    flex: 1; max-width: 150px; text-align: center; text-decoration: none;
+    color: var(--ink-3); font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    padding: 7px 2px 5px; border-radius: 9px; text-transform: uppercase;
+  }
+  nav.tabs a .glyph { display: block; font-size: 16px; margin-bottom: 1px; }
+  nav.tabs a.active { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+  /* ---------- schedule / gantt ---------- */
+  .gantt { display: grid; grid-template-columns: 132px 1fr; font-size: 11.5px;
+    background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 12px 12px 14px; }
+  .g-axis { position: relative; height: 22px; border-bottom: 1px solid var(--line); }
+  .g-axis span { position: absolute; transform: translateX(-50%); top: 2px;
+    font-size: 10px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .g-axis-spacer { border-bottom: 1px solid var(--line); }
+  .g-lab { height: 22px; display: flex; align-items: center; padding-right: 8px;
+    color: var(--ink-2); overflow: hidden; }
+  .g-lab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .g-lab.phase { font-weight: 650; color: var(--ink); height: 30px; align-items: flex-end; padding-bottom: 6px; }
+  .g-plot { position: relative; height: 22px; }
+  .g-plot.phase { height: 30px; }
+  .g-grid { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); opacity: 0.6; }
+  .g-bar { position: absolute; top: 6px; height: 10px; border-radius: 3px; min-width: 3px; }
+  .g-bar.done { opacity: 0.45; }
+  .g-diamond { position: absolute; top: 6px; width: 9px; height: 9px; margin-left: -4.5px;
+    background: var(--ink); transform: rotate(45deg); border-radius: 1.5px;
+    box-shadow: 0 0 0 2px var(--card); }
+  .g-span { position: absolute; bottom: 6px; height: 3px; border-radius: 2px; opacity: 0.5; }
+  .g-today { position: absolute; top: 0; bottom: 0; width: 1.5px; background: var(--crit); }
+  .g-todaytag { position: sticky; display: inline-block; font-size: 10px; color: var(--crit);
+    font-weight: 650; }
+  .legend-note { font-size: 11.5px; color: var(--ink-3); margin: 8px 2px 0; }
+
+  /* ---------- tables ---------- */
+  .tablecard { background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 4px 14px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  th { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td .sub { display: block; font-size: 11.5px; color: var(--ink-3); }
+  .pos { color: var(--good-text); } .neg { color: var(--crit); }
+
+  /* ---------- list rows (selections / activity) ---------- */
+  .rowcard { background: var(--card); border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 2px 0; }
+  .lrow { display: flex; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line);
+    align-items: baseline; }
+  .lrow:last-child { border-bottom: none; }
+  .lrow .l-main { min-width: 0; }
+  .lrow .l-title { font-weight: 600; font-size: 14px; }
+  .lrow .l-sub { font-size: 12.5px; color: var(--ink-2); margin-top: 1px; }
+  .lrow .l-side { margin-left: auto; text-align: right; flex: none; }
+  .lrow .l-val { font-weight: 650; font-variant-numeric: tabular-nums; font-size: 13.5px; }
+  .lrow .l-when { font-size: 11.5px; color: var(--ink-3); }
+  .duechip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .duechip.late { background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); }
+  .duechip.soon { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+  .duechip.ok   { background: color-mix(in srgb, var(--good) 12%, transparent); color: var(--good-text); }
+  .duechip.done { background: var(--ground); color: var(--ink-3); }
+
+  .samplenote {
+    margin-top: 26px; font-size: 12px; color: var(--ink-3);
+    border-top: 1px solid var(--line); padding-top: 12px;
+  }
+  .samplenote b { color: var(--ink-2); }
+  /* ---------- buildertrend-style gantt ---------- */
+  .btg { background: var(--card); border-block: 1px solid var(--hairline);
+    overflow: auto; -webkit-overflow-scrolling: touch;
+    margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw);
+    height: calc(100dvh - 330px); min-height: 340px; }
+  .btg-canvas { position: relative; }
+  .btg-months { position: sticky; top: 0; z-index: 4; background: var(--card);
+    height: 22px; border-bottom: 1px solid var(--line); }
+  .btg-month { position: absolute; top: 0; height: 22px; font-size: 10.5px; font-weight: 600;
+    color: var(--ink-2); padding: 4px 0 0 6px; border-left: 1px solid var(--line);
+    white-space: nowrap; overflow: hidden; }
+  .btg-days { position: sticky; top: 22px; z-index: 4; background: var(--card);
+    height: 16px; border-bottom: 1px solid var(--line); }
+  .btg-corner { position: sticky; left: 0; z-index: 2; width: 150px; height: 100%;
+    background: var(--card); border-right: 1px solid var(--line);
+    font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+    display: flex; align-items: center; padding-left: 10px; }
+  .btg-day { position: absolute; top: 1px; width: 16px; text-align: center; font-size: 8.5px;
+    color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .btg-rows { position: relative; }
+  .btg-row { position: relative; height: 26px; }
+  .btg-row.sel { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .btg-left { position: sticky; left: 0; z-index: 2; width: 150px; height: 26px;
+    background: var(--card); border-right: 1px solid var(--line); padding: 2px 8px 0 10px;
+    display: flex; flex-direction: column; justify-content: center; cursor: pointer; }
+  .btg-row.sel .btg-left { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .btg-title { font-size: 11px; font-weight: 600; color: var(--ink); line-height: 1.15;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .btg-sub { font-size: 9.5px; color: var(--ink-3); line-height: 1.2; white-space: nowrap;
+    font-variant-numeric: tabular-nums; }
+  .btg-bar { position: absolute; top: 7px; height: 12px; border-radius: 3px; min-width: 4px;
+    cursor: pointer; touch-action: pan-x; }
+  .btg-bar.done { opacity: 0.4; }
+  .btg-bar.sel { outline: 2px solid var(--accent); outline-offset: 1px; cursor: grab; touch-action: none; }
+  .btg-bar.dragging { cursor: grabbing; opacity: 0.85; }
+  .btg-dia { position: absolute; top: 8px; width: 10px; height: 10px; margin-left: -5px;
+    background: var(--ink); transform: rotate(45deg); border-radius: 1.5px; cursor: pointer;
+    box-shadow: 0 0 0 2px var(--card); }
+  .btg-dia.sel { outline: 2px solid var(--accent); outline-offset: 1px; touch-action: none; }
+  .btg-name { position: absolute; top: 6px; font-size: 10px; color: var(--ink-2);
+    white-space: nowrap; pointer-events: none; }
+  .btg-today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--crit); z-index: 1; }
+  .btg-todaycap { position: absolute; top: -19px; transform: translateX(-50%); font-size: 9px;
+    font-weight: 700; color: var(--crit); background: var(--card); padding: 0 3px; }
+
+  /* edit sheet */
+  .sheet { position: fixed; z-index: 8; left: 10px; right: 10px; bottom: calc(74px + env(safe-area-inset-bottom));
+    max-width: 620px; margin: 0 auto; background: var(--card); border: 1px solid var(--hairline);
+    border-radius: 14px; box-shadow: 0 8px 28px rgba(0,0,0,0.22); padding: 12px 14px; font-size: 13px; }
+  .sheet .sh-head { display: flex; align-items: baseline; gap: 8px; }
+  .sheet .sh-name { font-weight: 700; font-size: 14px; }
+  .sheet .sh-dates { color: var(--ink-2); font-size: 12px; margin-left: auto;
+    font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sheet .sh-pred { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+  .sheet .sh-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .sheet button { font: inherit; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line);
+    background: var(--ground); color: var(--ink); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+  .sheet button:active { filter: brightness(0.94); }
+  .sheet button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .sheet button.danger { color: var(--crit); }
+  .sheet .sh-x { margin-left: auto; }
+  .sheet label.casc { display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+    color: var(--ink-2); margin-left: 2px; }
+  .addbtn { margin-left: auto; font: inherit; font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent);
+    background: var(--card); border: 1px solid var(--line); border-radius: 7px;
+    padding: 4px 9px; cursor: pointer; }
+  .sh-in { font: inherit; font-size: 13px; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--ground); color: var(--ink); min-width: 0; }
+  .changesbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 12px;
+    color: var(--ink-2); flex-wrap: wrap; }
+  .changesbar button { font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line);
+    background: var(--card); color: var(--accent); border-radius: 7px; padding: 5px 9px; cursor: pointer; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .jobcard, .tile, .stat { transition: transform 0.08s ease; }
+    .jobcard:active { transform: scale(0.99); }
+  }
+</style>
+
+<div id="app"></div>
+
+<script>
+/* =============== DATA — replaced by Claude from the KH vault =============== */
+let GENERATED = "Live schedules \u00b7 July 2, 2026";
+const PHASE_NAMES = ["Pre-Construction","Sitework & Foundation","Framing & Dry-In","Rough-Ins",
+  "Insulation & Drywall","Interior Finishes","Exterior Completion","Completion & Closing"];
+
+let JOBS = [
+  {
+    slug: "boulder-creek",
+    name: "Boulder Creek",
+    client: "",
+    address: "1232 Boulder Creek",
+    status: "Open",
+    contractType: "",
+    contract: null,
+    jrt: null,
+    startDate: "2024-05-15",
+    currentDay: 556,
+    scheduleDelta: -42,   // stale plan closed Jul 1; re-laid close Aug 28
+    nextMilestone: { name: "Trim complete", day: 571 },
+    phase: 5,
+    // [id, name, dur, [preds], phase, start(wd), pctComplete] — from Buildertrend
+    // export; tail re-laid Jul 2 2026 per field update: ~3 weeks of trim left,
+    // then paint and remaining trades at the stale plan's durations.
+    tasks: [
+      [1,"Permit",17,[],0,0,100],
+      [2,"Clear lot",4,[],1,3,100],
+      [3,"Excavation",3,[],1,17,100],
+      [4,"Footings",1,[],1,20,100],
+      [5,"Poured walls",7,[],1,21,100],
+      [6,"Vapor barrier + insulate",1,[],1,28,100],
+      [7,"Backfill",2,[],1,30,100],
+      [8,"Framing",25,[],2,38,100],
+      [9,"Plumbing underground",1,[],1,48,100],
+      [10,"Pour basement",1,[],1,51,100],
+      [11,"Windows installed",1,[],2,63,100],
+      [12,"HVAC rough",6,[],3,73,100],
+      [13,"Plumbing rough-in",145,[],3,103,100],
+      [14,"Electrical rough-in",110,[],3,269,100],
+      [15,"Order appraisal",1,[],7,294,100],
+      [16,"Appraisal due",1,[],7,304,100],
+      [17,"Inspections",1,[],3,380,100],
+      [18,"Insulation",4,[],4,381,100],
+      [19,"Drywall",15,[],4,391,100],
+      [20,"Mud and tape",11,[],4,407,100],
+      [21,"Prime",1,[],4,418,100],
+      [22,"Tile",30,[],5,418,100],
+      [23,"Tile (phase 2)",12,[],5,479,100],
+      [24,"Hardwood floors",8,[],5,495,100],
+      [25,"Box drop",2,[],5,503,100],
+      [26,"Concrete flat work",3,[],6,506,100],
+      [27,"Irrigation and seed",3,[],6,510,100],
+      [28,"Trim",24,[],5,548,38],
+      [29,"Countertop template",1,[],5,568,0],
+      [30,"Paint",14,[],5,572,0],
+      [31,"Counter tops in",1,[],5,586,0],
+      [32,"HVAC trim",1,[],5,586,0],
+      [33,"Plumbing trim",2,[],5,587,0],
+      [34,"Tile backsplash",2,[],5,587,0],
+      [35,"Electrical trim",2,[],5,589,0],
+      [36,"Blower door test",1,[],5,591,0],
+      [37,"Carpet",1,[],5,591,0],
+      [38,"Cleaning",3,[],7,592,0],
+      [39,"Final inspection",1,[],7,595,0],
+      [40,"MILESTONE: Close",0,[],7,597,0]
+    ],
+    budget: [],
+    selections: [],
+    changeOrders: [],
+    logs: [
+      ["Jul 2","Schedule re-laid per field update: ~3 weeks of trim left (through Thu Jul 23). Then paint Jul 24\u2013Aug 12, tops in Aug 13, mechanical trims + backsplash Aug 14\u201319, blower door + carpet Aug 20, cleaning, final inspection Aug 26. Close penciled Fri Aug 28 \u2014 confirm actual closing date.",""]
+    ]
+  },
+  {
+    slug: "bentley-dr",
+    name: "2877 Bentley Dr SW",
+    client: "",
+    address: "2877 Bentley Dr SW",
+    status: "Open",
+    contractType: "",
+    contract: null,
+    jrt: null,
+    startDate: "2025-12-26",
+    currentDay: 134,
+    scheduleDelta: 0,
+    nextMilestone: { name: "Final inspection", day: 139 },
+    phase: 5,
+    tasks: [
+      [1,"Permit",12,[],0,0,100],
+      [2,"Excavation",2,[],1,12,100],
+      [3,"Footings",1,[],1,14,100],
+      [4,"Poured walls",3,[],1,21,100],
+      [5,"Vapor barrier + insulate",1,[],1,24,100],
+      [6,"Backfill",1,[],1,25,100],
+      [7,"Framing",21,[],2,35,100],
+      [8,"Plumbing underground",1,[],1,38,100],
+      [9,"Pour basement",1,[],1,40,100],
+      [10,"Plumbing rough-in",6,[],3,56,100],
+      [11,"Windows installed",1,[],2,56,100],
+      [12,"HVAC rough",8,[],3,62,100],
+      [13,"Electrical rough-in",3,[],3,67,100],
+      [14,"Inspections",1,[],3,71,100],
+      [15,"Insulation",4,[],4,72,100],
+      [16,"Drywall",5,[],4,76,100],
+      [17,"Concrete flat work",3,[],6,81,100],
+      [18,"Mud and tape",11,[],4,82,100],
+      [19,"Irrigation and sod",3,[],6,85,100],
+      [20,"Prime",1,[],4,93,100],
+      [21,"Tile",5,[],5,93,100],
+      [22,"Hardwood floors",6,[],5,94,100],
+      [23,"Box drop",2,[],5,100,100],
+      [24,"Countertop template",1,[],5,102,100],
+      [25,"Trim",12,[],5,102,100],
+      [26,"Paint",12,[],5,114,100],
+      [27,"Counter tops in",1,[],5,126,100],
+      [28,"HVAC trim",1,[],5,126,100],
+      [29,"Plumbing trim",2,[],5,127,100],
+      [30,"Tile backsplash",1,[],5,127,100],
+      [31,"Electrical trim",2,[],5,128,100],
+      [32,"Blower door test",1,[],5,130,100],
+      [33,"Carpet",4,[],5,130,100],
+      [34,"Final coat floor",1,[],5,134,0],
+      [35,"Cleaning",3,[],7,135,0],
+      [36,"Final inspection",1,[],7,139,0],
+      [37,"MILESTONE: Close",0,[],7,143,0]
+    ],
+    budget: [],
+    selections: [],
+    changeOrders: [],
+    logs: [
+      ["Jul 2","Final floor coat today; cleaning Fri\u2013Tue; final inspection Thu Jul 9; close Wed Jul 15.",""]
+    ]
+  }
+];
+/* ============================== end DATA ============================== */
+
+const BUILD = 9; // bump on every app change — shown in the header
+const $ = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstChild; };
+const money = (n) => (n < 0 ? "−$" : "$") + Math.abs(Math.round(n)).toLocaleString();
+const moneyK = (n) => (n < 0 ? "−$" : "$") + (Math.abs(n) >= 1e6 ? (Math.abs(n)/1e6).toFixed(2) + "M" : Math.round(Math.abs(n)/1000) + "K");
+const esc = (s) => { const d = document.createElement("span"); d.textContent = s; return d.innerHTML; };
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+// working-day index -> calendar Date (skips Sat/Sun)
+function wdDate(job, wd) {
+  if (!job.startDate) return null;
+  const d = new Date(job.startDate + "T12:00");
+  let n = 0;
+  while (n < wd) { d.setDate(d.getDate() + 1); const g = d.getDay(); if (g !== 0 && g !== 6) n++; }
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  return d;
+}
+function fmtDay(job, wd, withYear) {
+  const d = wdDate(job, wd);
+  if (!d) return "wk " + Math.ceil(wd / 5);
+  return MONTHS[d.getMonth()] + " " + d.getDate() + (withYear ? " ’" + String(d.getFullYear()).slice(2) : "");
+}
+
+function schedule(job) {
+  const byId = {};
+  for (const [id, name, dur, preds, ph, ov, pct] of job.tasks) {
+    let start = 0;
+    for (const p of preds) {
+      const m = p.match(/^(\d+)(SS)?(?:\+(\d+))?$/);
+      const pred = byId[m[1]]; if (!pred) continue;
+      start = Math.max(start, (m[2] === "SS" ? pred.start : pred.end) + (m[3] ? +m[3] : 0));
+    }
+    if (ov != null) start = ov;
+    byId[id] = { id, name, dur, preds, ph, start, end: start + dur, pct: pct || 0 };
+  }
+  const tasks = Object.values(byId);
+  return { tasks, total: Math.max(...tasks.map(t => t.end)) };
+}
+
+function jobStats(job) {
+  const { tasks, total } = schedule(job);
+  // budget rows follow the master sworn statement: [description, contractor, contract, paid]
+  const contract = job.budget.reduce((s, r) => s + (r[2] || 0), 0);
+  const paid = job.budget.reduce((s, r) => s + (r[3] || 0), 0);
+  const est = contract, revised = contract, actual = paid, spent = paid;
+  const done = tasks.filter(t => t.dur > 0 && t.pct === 100).reduce((s,t) => s + t.dur, 0)
+    + tasks.filter(t => t.dur > 0 && t.pct > 0 && t.pct < 100).reduce((s,t) => s + t.dur * t.pct / 100, 0);
+  const workdays = tasks.filter(t => t.dur > 0).reduce((s,t) => s + t.dur, 0);
+  const selDue = job.selections.filter(s => s[5] === "Pending" && s[4] - job.currentDay <= 14).length;
+  const openCOs = job.changeOrders.filter(c => c[3] === "Sent").length;
+  return { total, est, revised, spent, committed: actual, contract, paid,
+    pctDone: workdays ? Math.round(done / workdays * 100) : 0, selDue, openCOs };
+}
+
+/* ---------------- views ---------------- */
+function homeView() {
+  const app = document.getElementById("app");
+  app.replaceChildren();
+  app.append($(`<header class="top"><span class="wordmark">KH<span class="slash"> /</span> JOB HUB</span>
+    <span class="sheetno">${esc(GENERATED)} · b${BUILD}${SERVER ? " · server" : ""}</span></header>`));
+
+  const stats = JOBS.map(jobStats);
+  const active = JOBS.filter(j => j.status !== "Closed").length;
+  const behind = JOBS.filter(j => j.scheduleDelta < 0).length;
+  const selDue = stats.reduce((s, x) => s + x.selDue, 0);
+  const hasBudgets = JOBS.some(j => j.budget.length);
+  const swornTotal = stats.reduce((s, x) => s + x.contract, 0);
+  const paidTotal = stats.reduce((s, x) => s + x.paid, 0);
+
+  app.append($(`<div class="eyebrow">Portfolio</div>`));
+  const tiles = $(`<div class="tiles"></div>`);
+  tiles.append(
+    $(`<div class="tile"><div class="t-label">Active jobs</div><div class="t-value">${active}</div>
+       <div class="t-sub">${JOBS.map(j=>esc(j.name)).join(" · ")}</div></div>`),
+    $(`<div class="tile"><div class="t-label">Schedule</div><div class="t-value">${behind ? behind + " behind" : "On track"}</div>
+       <div class="t-sub">vs locked baselines</div></div>`),
+    $(`<div class="tile"><div class="t-label">Selections due ≤ 2 wks</div><div class="t-value">${selDue}</div>
+       <div class="t-sub">across all jobs</div></div>`),
+    hasBudgets
+      ? $(`<div class="tile"><div class="t-label">Sworn contracts</div>
+         <div class="t-value">${moneyK(swornTotal)}</div>
+         <div class="t-sub">paid to date ${moneyK(paidTotal)}</div></div>`)
+      : $(`<div class="tile"><div class="t-label">Sworn statements</div><div class="t-value">—</div>
+         <div class="t-sub">not loaded yet</div></div>`)
+  );
+  app.append(tiles);
+
+  app.append($(`<div class="eyebrow">Jobs</div>`));
+  JOBS.forEach((job, i) => {
+    const s = jobStats(job);
+    const behindChip = job.scheduleDelta < 0
+      ? `<span class="chip crit">${-job.scheduleDelta}d behind</span>`
+      : `<span class="chip ok">On schedule</span>`;
+    const sel = s.selDue ? `<span class="chip warn">${s.selDue} selection${s.selDue>1?"s":""} due</span>` : "";
+    const cos = s.openCOs ? `<span class="chip">${s.openCOs} CO awaiting client</span>` : "";
+    const card = $(`<a class="jobcard" href="#/job/${job.slug}/schedule" style="--jc: var(--p${job.phase})">
+      <div class="jc-head"><span class="jc-name">${esc(job.name)}</span>
+        <span class="jc-client">${esc(job.client)}</span></div>
+      <div class="chips"><span class="chip" style="color:var(--ink)">${esc(PHASE_NAMES[job.phase])}</span>
+        ${behindChip}${sel}${cos}</div>
+      <div class="meter"><div class="fill" style="width:${s.pctDone}%"></div></div>
+      <div class="jc-next"><b>${s.pctDone}%</b> of scheduled work complete · next milestone:
+        <b>${esc(job.nextMilestone.name)}</b> ${esc(fmtDay(job, job.nextMilestone.day, true))}</div>
+    </a>`);
+    app.append(card);
+  });
+
+  app.append($(`<div class="samplenote"><b>Schedules from Buildertrend exports</b>, updated Jul 2, 2026.
+    Boulder Creek re-laid per field update: ~3 weeks of trim left, then paint and remaining trades —
+    close penciled Aug 28 (confirm). Budgets and selections aren't loaded yet — tell Claude the numbers
+    or add them to the vault, then say “refresh the Job Hub.”</div>`));
+}
+
+function jobView(slug, tab) {
+  const job = JOBS.find(j => j.slug === slug);
+  if (!job) return homeView();
+  const app = document.getElementById("app");
+  app.replaceChildren();
+  const s = jobStats(job);
+
+  app.append($(`<header class="top"><a class="back" href="#/">‹ Jobs</a>
+    <span class="sheetno">${esc([job.status, job.contractType].filter(Boolean).join(" · "))} · b${BUILD}</span></header>`));
+  const meta = [job.address !== job.name ? job.address : "", job.client].filter(Boolean).join(" · ");
+  app.append($(`<div><div class="jobtitle">${esc(job.name)}</div>
+    ${meta ? `<div class="jobmeta">${esc(meta)}</div>` : ""}</div>`));
+
+  const deltaCls = job.scheduleDelta < 0 ? "crit" : "ok";
+  const grid = $(`<div class="statgrid"></div>`);
+  grid.append($(`<div class="stat"><div class="s-label">Schedule</div>
+      <div class="s-value ${deltaCls}">${job.scheduleDelta < 0 ? -job.scheduleDelta + "d behind" : "on time"}</div></div>`));
+  if (job.jrt != null) {
+    const margin = job.jrt - s.revised;
+    grid.append(
+      $(`<div class="stat"><div class="s-label">Running total</div><div class="s-value">${moneyK(job.jrt)}</div></div>`),
+      $(`<div class="stat"><div class="s-label">Proj. margin</div>
+          <div class="s-value ${margin >= 0 ? "" : "crit"}">${moneyK(margin)}</div></div>`)
+    );
+  } else if (job.budget.length) {
+    grid.append(
+      $(`<div class="stat"><div class="s-label">Sworn total</div><div class="s-value">${moneyK(s.contract)}</div></div>`),
+      $(`<div class="stat"><div class="s-label">Paid to date</div><div class="s-value">${moneyK(s.paid)}</div></div>`)
+    );
+  } else {
+    grid.append(
+      $(`<div class="stat"><div class="s-label">Complete</div><div class="s-value">${s.pctDone}%</div></div>`),
+      $(`<div class="stat"><div class="s-label">${esc(job.nextMilestone.name)}</div>
+          <div class="s-value">${esc(fmtDay(job, job.nextMilestone.day, false))}</div></div>`)
+    );
+  }
+  app.append(grid);
+
+  const body = $(`<div></div>`);
+  app.append(body);
+  if (tab === "budget") budgetTab(body, job);
+  else if (tab === "selections") selectionsTab(body, job);
+  else if (tab === "activity") activityTab(body, job);
+  else scheduleTab(body, job);
+
+  const tabs = $(`<nav class="tabs"></nav>`);
+  for (const [key, glyph, label] of [["schedule","▦","Schedule"],["budget","Σ","Budget"],
+      ["selections","✓","Selections"],["activity","≡","Activity"]]) {
+    tabs.append($(`<a href="#/job/${job.slug}/${key}" class="${tab === key ? "active" : ""}">
+      <span class="glyph">${glyph}</span>${label}</a>`));
+  }
+  app.append(tabs);
+}
+
+// ---------- Buildertrend-style editable gantt ----------
+const DAYW = 16, LEFTW = 150, EDITS_KEY = "khjobhub-edits-v1";
+let SEL = null, CASCADE = true, SCROLLX = null, SCROLLY = null, ADDING = false;
+let SERVER = false, EDITS = null;
+function loadEdits() {
+  if (SERVER) return EDITS || {};
+  try { return JSON.parse(localStorage.getItem(EDITS_KEY)) || {}; } catch (e) { return {}; }
+}
+function saveEdits(v) {
+  if (SERVER) {
+    EDITS = v;
+    fetch("api/edits", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(v) }).catch(() => {});
+    return;
+  }
+  try { localStorage.setItem(EDITS_KEY, JSON.stringify(v)); } catch (e) {}
+}
+
+function calMaps(job, maxWd) {
+  const start = new Date(job.startDate + "T12:00");
+  const wd2cal = [0], calWd = [0], calDate = [new Date(start)];
+  let d = new Date(start), cal = 0, w = 0;
+  while (w < maxWd + 5) {
+    d.setDate(d.getDate() + 1); cal++;
+    const g = d.getDay();
+    calDate[cal] = new Date(d);
+    if (g !== 0 && g !== 6) { w++; wd2cal[w] = cal; calWd[cal] = w; }
+    else calWd[cal] = -1;
+  }
+  return { start, wd2cal, calWd, calDate, calTotal: cal };
+}
+
+function scheduleTab(root, job) {
+  const allEdits = loadEdits(), edits = allEdits[job.slug] || {};
+  const base = schedule(job).tasks;
+  const addedItems = (edits._added || []).map(a => {
+    const e = edits[a.id] || {};
+    const start = e.start != null ? e.start : a.start;
+    const dur = e.dur != null ? e.dur : a.dur;
+    return { id: a.id, name: a.name, dur, ph: a.ph, preds: [], pct: 0,
+      start, end: start + dur, baseStart: a.start, baseDur: a.dur,
+      predBroken: !!e.predBroken, added: true };
+  });
+  const tasks = base.map(t => {
+    const e = edits[t.id] || {};
+    const start = e.start != null ? e.start : t.start;
+    const dur = e.dur != null ? e.dur : t.dur;
+    return { ...t, start, dur, end: start + dur, baseStart: t.start, baseDur: t.dur,
+      predBroken: !!e.predBroken };
+  }).concat(addedItems)
+    .sort((x, y) => x.start - y.start || String(x.id).localeCompare(String(y.id)));
+  const totalWd = Math.max(...tasks.map(t => t.end), job.currentDay) + 25;
+  const M = calMaps(job, totalWd);
+
+  // inferred finish-to-start links: pred = latest-finishing trade that ends by my start
+  for (const t of tasks) {
+    let best = null;
+    for (const o of tasks) {
+      if (o === t || o.end > t.start || o.dur === 0) continue;
+      if (!best || o.end > best.end || (o.end === best.end && o.start > best.start)) best = o;
+    }
+    t.pred = best;
+  }
+  const chain = (t, out) => {
+    out = out || new Set();
+    for (const s of tasks) if (s.pred === t && !s.predBroken && !out.has(s)) { out.add(s); chain(s, out); }
+    return out;
+  };
+  const mutate = (list, fn) => {
+    const all = loadEdits(); const e = all[job.slug] = all[job.slug] || {};
+    for (const x of list) { e[x.id] = e[x.id] || {}; fn(e[x.id], x); }
+    saveEdits(all); route();
+  };
+  const moveBy = (t, dWd) => {
+    if (!dWd) return;
+    const list = CASCADE ? [t, ...chain(t)] : [t];
+    if (list.some(x => x.start + dWd < 0)) return;
+    mutate(list, (e, x) => { e.start = x.start + dWd; });
+  };
+
+  const closeWd = Math.max(...tasks.map(t => t.end));
+  const eb = $(`<div class="eyebrow" style="display:flex;align-items:center;gap:8px"><span>Schedule
+    · today ${esc(fmtDay(job, job.currentDay, true))} · close ${esc(fmtDay(job, closeWd, true))}</span></div>`);
+  const addOpen = $(`<button class="addbtn">＋ Add item</button>`);
+  addOpen.addEventListener("click", () => {
+    const g = document.querySelector(".btg");
+    if (g) { SCROLLX = g.scrollLeft; SCROLLY = g.scrollTop; }
+    ADDING = true; SEL = null; route();
+  });
+  eb.append(addOpen);
+  root.append(eb);
+
+  const wrap = $(`<div class="btg"></div>`);
+  const W = LEFTW + (M.calTotal + 1) * DAYW;
+  const canvas = $(`<div class="btg-canvas" style="width:${W}px"></div>`);
+
+  // month header
+  const months = $(`<div class="btg-months"></div>`);
+  let mStart = 0;
+  for (let c = 1; c <= M.calTotal + 1; c++) {
+    const prev = M.calDate[c-1], cur = M.calDate[Math.min(c, M.calTotal)];
+    if (c > M.calTotal || cur.getMonth() !== prev.getMonth()) {
+      months.append($(`<div class="btg-month" style="left:${LEFTW + mStart*DAYW}px;width:${(c-mStart)*DAYW}px">
+        ${MONTHS[prev.getMonth()]} ${prev.getFullYear()}</div>`));
+      mStart = c;
+    }
+  }
+  months.prepend($(`<div class="btg-corner">Trade</div>`));
+  canvas.append(months);
+  // day numbers (today highlighted red so the date is visible while scrolling)
+  const days = $(`<div class="btg-days"></div>`);
+  for (let c = 0; c <= M.calTotal; c++) {
+    const isToday = c === M.wd2cal[job.currentDay];
+    days.append($(`<div class="btg-day" style="left:${LEFTW + c*DAYW}px${isToday ? ";color:var(--crit);font-weight:700" : ""}">${M.calDate[c].getDate()}</div>`));
+  }
+  days.prepend($(`<div class="btg-corner"></div>`));
+  canvas.append(days);
+
+  // rows with weekend shading
+  const rows = $(`<div class="btg-rows"></div>`);
+  const satOff = (6 - M.start.getDay() + 7) % 7;
+  rows.style.background = `repeating-linear-gradient(90deg, color-mix(in srgb, var(--ink) 5%, transparent) 0, color-mix(in srgb, var(--ink) 5%, transparent) ${2*DAYW}px, transparent ${2*DAYW}px, transparent ${7*DAYW}px)`;
+  rows.style.backgroundPositionX = (LEFTW + satOff * DAYW) + "px";
+
+  const todayCal = M.wd2cal[job.currentDay];
+  for (const t of tasks) {
+    const row = $(`<div class="btg-row ${SEL === t.id ? "sel" : ""}"></div>`);
+    const name = t.name.replace("MILESTONE: ", "");
+    const left = $(`<div class="btg-left"><div class="btg-title">${esc(name)}</div>
+      <div class="btg-sub">${esc(fmtDay(job, t.start, true))}${t.dur ? " · " + t.dur + "d" : ""}</div></div>`);
+    left.addEventListener("click", () => { SEL = SEL === t.id ? null : t.id; SCROLLX = wrap.scrollLeft; SCROLLY = wrap.scrollTop; route(); });
+    row.append(left);
+    const calS = M.wd2cal[t.start];
+    let mark, right;
+    if (t.dur === 0) {
+      mark = $(`<div class="btg-dia ${SEL === t.id ? "sel" : ""}" style="left:${LEFTW + calS*DAYW + DAYW/2}px"></div>`);
+      right = LEFTW + calS*DAYW + DAYW;
+    } else {
+      const calE = M.wd2cal[t.start + t.dur - 1] + 1;
+      mark = $(`<div class="btg-bar ${t.pct === 100 ? "done" : ""} ${SEL === t.id ? "sel" : ""}"
+        style="left:${LEFTW + calS*DAYW}px;width:${(calE - calS)*DAYW - 2}px;background:var(--p${t.ph})"></div>`);
+      right = LEFTW + calE*DAYW;
+    }
+    if (SEL !== t.id) {
+      mark.addEventListener("click", () => { SEL = t.id; SCROLLX = wrap.scrollLeft; SCROLLY = wrap.scrollTop; route(); });
+    } else {
+      // drag to move (selected only, so page panning still works elsewhere)
+      let sx = null, dx = 0, moved = false;
+      mark.addEventListener("pointerdown", ev => {
+        sx = ev.clientX; dx = 0; moved = false;
+        mark.setPointerCapture(ev.pointerId); mark.classList.add("dragging");
+        ev.preventDefault();
+      });
+      mark.addEventListener("pointermove", ev => {
+        if (sx == null) return; dx = ev.clientX - sx;
+        if (Math.abs(dx) > 4) moved = true;
+        mark.style.transform = `translateX(${Math.round(dx / DAYW) * DAYW}px)`;
+      });
+      const drop = () => {
+        if (sx == null) return;
+        const dCal = Math.round(dx / DAYW); sx = null;
+        mark.classList.remove("dragging"); mark.style.transform = "";
+        if (!moved) { SEL = null; SCROLLX = wrap.scrollLeft; SCROLLY = wrap.scrollTop; route(); return; }
+        if (!dCal) return;
+        let target = Math.max(0, Math.min(M.calTotal, M.wd2cal[t.start] + dCal));
+        let wdNew = -1;
+        for (let k = 0; k < 5 && wdNew < 0; k++) {
+          if (M.calWd[target + k] >= 0) wdNew = M.calWd[target + k];
+          else if (target - k >= 0 && M.calWd[target - k] >= 0) wdNew = M.calWd[target - k];
+        }
+        SCROLLX = wrap.scrollLeft; SCROLLY = wrap.scrollTop;
+        if (wdNew >= 0) moveBy(t, wdNew - t.start);
+      };
+      mark.addEventListener("pointerup", drop);
+      mark.addEventListener("pointercancel", drop);
+    }
+    row.append(mark);
+    row.append($(`<div class="btg-name" style="left:${right + 6}px">${esc(name)}</div>`));
+    rows.append(row);
+  }
+  if (todayCal != null) {
+    rows.append($(`<div class="btg-today" style="left:${LEFTW + todayCal*DAYW + DAYW/2}px"></div>`));
+  }
+  canvas.append(rows);
+  wrap.append(canvas);
+  root.append(wrap);
+
+  // changes bar
+  const changed = tasks.filter(t => t.added || t.start !== t.baseStart || t.dur !== t.baseDur || t.predBroken);
+  if (changed.length) {
+    const bar = $(`<div class="changesbar"><span><b>${changed.length}</b> ${SERVER ? "shared" : "local"} change${changed.length>1?"s":""}${SERVER ? " (everyone sees these)" : " on this device"}</span></div>`);
+    const copyBtn = $(`<button>Copy for Claude</button>`);
+    copyBtn.addEventListener("click", () => {
+      const txt = job.name + " schedule changes:\n" + changed.map(t => t.added
+        ? `- added "${t.name}": ${fmtDay(job, t.start, true)}, ${t.dur}d`
+        : `- ${t.name.replace("MILESTONE: ","")}: ` +
+          (t.start !== t.baseStart ? `moved ${fmtDay(job, t.baseStart, true)} → ${fmtDay(job, t.start, true)}` : "") +
+          (t.dur !== t.baseDur ? ` duration ${t.baseDur}→${t.dur}d` : "") +
+          (t.predBroken ? " (link broken)" : "")).join("\n");
+      if (navigator.clipboard) navigator.clipboard.writeText(txt);
+      copyBtn.textContent = "Copied ✓";
+    });
+    const resetBtn = $(`<button>Reset all</button>`);
+    resetBtn.addEventListener("click", () => {
+      const all = loadEdits(); delete all[job.slug]; saveEdits(all); SEL = null; route();
+    });
+    bar.append(copyBtn, resetBtn);
+    root.append(bar);
+  }
+  root.append($(`<div class="legend-note">Red line = today. Moves cascade through the linked trades after
+    (uncheck “move linked too” to move one trade alone; “break link” frees a trade from its predecessor).
+    ${SERVER ? "Edits save to the KH server — everyone sees the same schedule."
+             : "Edits save on this device — “Copy for Claude” to make them permanent for everyone."}</div>`));
+
+  // edit sheet
+  const selTask = tasks.find(t => t.id === SEL);
+  if (selTask) {
+    const t = selTask;
+    const endLbl = t.dur ? `${fmtDay(job, t.start, false)} – ${fmtDay(job, t.start + t.dur - 1, true)} · ${t.dur}d`
+      : fmtDay(job, t.start, true);
+    const sheet = $(`<div class="sheet"></div>`);
+    sheet.append($(`<div class="sh-head"><span class="sh-name">${esc(t.name.replace("MILESTONE: ",""))}</span>
+      <span class="sh-dates">${esc(endLbl)}</span></div>`));
+    const nLinked = chain(t).size;
+    sheet.append($(`<div class="sh-pred">${t.pred
+      ? (t.predBroken ? "Link to “" + esc(t.pred.name.replace("MILESTONE: ","")) + "” broken — moves independently"
+                      : "Follows “" + esc(t.pred.name.replace("MILESTONE: ","")) + "”")
+      : "No predecessor"} · ${nLinked} linked trade${nLinked===1?"":"s"} after</div>`));
+    const btn = (label, fn, cls) => { const b = $(`<button class="${cls||""}">${label}</button>`);
+      b.addEventListener("click", () => { const g = document.querySelector(".btg");
+        if (g) { SCROLLX = g.scrollLeft; SCROLLY = g.scrollTop; } fn(); }); return b; };
+    const r1 = $(`<div class="sh-row"></div>`);
+    r1.append(
+      btn("◀ 1d", () => moveBy(t, -1)),
+      btn("1d ▶", () => moveBy(t, 1)),
+      btn("◀ 1wk", () => moveBy(t, -5)),
+      btn("1wk ▶", () => moveBy(t, 5))
+    );
+    if (t.dur > 0) r1.append(
+      btn("− dur", () => { if (t.dur <= 1) return;
+        const list = CASCADE ? [...chain(t)] : [];
+        const all = loadEdits(); const e = all[job.slug] = all[job.slug] || {};
+        (e[t.id] = e[t.id] || {}).dur = t.dur - 1;
+        for (const x of list) (e[x.id] = e[x.id] || {}).start = x.start - 1;
+        saveEdits(all); route(); }),
+      btn("+ dur", () => {
+        const list = CASCADE ? [...chain(t)] : [];
+        const all = loadEdits(); const e = all[job.slug] = all[job.slug] || {};
+        (e[t.id] = e[t.id] || {}).dur = t.dur + 1;
+        for (const x of list) (e[x.id] = e[x.id] || {}).start = x.start + 1;
+        saveEdits(all); route(); })
+    );
+    const r2 = $(`<div class="sh-row"></div>`);
+    if (t.added) r2.append(btn("Delete", () => {
+      const all = loadEdits(); const e = all[job.slug] || {};
+      e._added = (e._added || []).filter(a => a.id !== t.id);
+      delete e[t.id];
+      saveEdits(all); SEL = null; route();
+    }, "danger"));
+    if (t.pred) r2.append(btn(t.predBroken ? "Relink" : "Break link",
+      () => mutate([t], e => { e.predBroken = !t.predBroken; }), "danger"));
+    const casc = $(`<label class="casc"><input type="checkbox" ${CASCADE ? "checked" : ""}> move linked too</label>`);
+    casc.querySelector("input").addEventListener("change", ev => { CASCADE = ev.target.checked; });
+    r2.append(casc);
+    r2.append(btn("Done", () => { SEL = null; route(); }, "primary sh-x"));
+    sheet.append(r1, r2);
+    root.append(sheet);
+  }
+
+  // add-item form
+  if (ADDING) {
+    const d0 = wdDate(job, job.currentDay);
+    const iso = d0.getFullYear() + "-" + String(d0.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d0.getDate()).padStart(2, "0");
+    const sheet = $(`<div class="sheet"></div>`);
+    sheet.append($(`<div class="sh-head"><span class="sh-name">Add scheduled item</span></div>`));
+    const nameIn = $(`<input class="sh-in" placeholder="Item name (e.g. Shower glass install)" style="flex:1">`);
+    const dateIn = $(`<input class="sh-in" type="date" value="${iso}">`);
+    const daysIn = $(`<input class="sh-in" type="number" value="1" min="1" style="width:64px">`);
+    const r1 = $(`<div class="sh-row"></div>`); r1.append(nameIn);
+    const r2 = $(`<div class="sh-row"></div>`);
+    r2.append(dateIn, daysIn, $(`<span style="color:var(--ink-3);font-size:12px">workdays</span>`));
+    const r3 = $(`<div class="sh-row"></div>`);
+    const cancel = $(`<button>Cancel</button>`);
+    cancel.addEventListener("click", () => { ADDING = false; route(); });
+    const save = $(`<button class="primary sh-x">Add ✓</button>`);
+    save.addEventListener("click", () => {
+      const name = nameIn.value.trim();
+      if (!name) { nameIn.style.borderColor = "var(--crit)"; nameIn.focus(); return; }
+      const dur = Math.max(1, parseInt(daysIn.value, 10) || 1);
+      // date -> workday index (snap weekends forward, clamp to domain)
+      let wd = null;
+      const iso2 = dateIn.value;
+      const firstIso = M.calDate[0].toISOString().slice(0, 10);
+      if (iso2 <= firstIso) wd = 0;
+      else {
+        for (let c = 0; c <= M.calTotal && wd == null; c++) {
+          const d = M.calDate[c];
+          const s = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" +
+            String(d.getDate()).padStart(2, "0");
+          if (s === iso2) for (let k = c; k <= M.calTotal && wd == null; k++)
+            if (M.calWd[k] >= 0) wd = M.calWd[k];
+        }
+        if (wd == null) wd = totalWd - 1; // past the visible window — lands at the end
+      }
+      // phase = nearest existing trade's phase
+      let ph = 5, bestGap = Infinity;
+      for (const o of tasks) { const g = Math.abs(o.start - wd); if (g < bestGap) { bestGap = g; ph = o.ph; } }
+      const all = loadEdits(); const e = all[job.slug] = all[job.slug] || {};
+      const id = "a" + Date.now().toString(36);
+      (e._added = e._added || []).push({ id, name, dur, start: wd, ph });
+      saveEdits(all);
+      ADDING = false; SEL = id;
+      const g2 = document.querySelector(".btg");
+      if (g2) { SCROLLX = g2.scrollLeft; SCROLLY = g2.scrollTop; }
+      route();
+    });
+    r3.append(cancel, save);
+    sheet.append(r1, r2, r3);
+    root.append(sheet);
+    requestAnimationFrame(() => nameIn.focus());
+  }
+
+  // restore scroll (or bring today + the active trades into view on first open)
+  const firstActive = Math.max(0, tasks.findIndex(t => t.pct < 100));
+  requestAnimationFrame(() => {
+    wrap.scrollLeft = SCROLLX != null ? SCROLLX
+      : Math.max(0, LEFTW + (todayCal || 0) * DAYW - wrap.clientWidth * 0.55);
+    wrap.scrollTop = SCROLLY != null ? SCROLLY : Math.max(0, firstActive * 26 - 90);
+    SCROLLX = null; SCROLLY = null;
+  });
+}
+
+function budgetTab(root, job) {
+  root.append($(`<div class="eyebrow">Budget · per master sworn statement</div>`));
+  if (!job.budget.length) {
+    root.append($(`<div class="rowcard"><div class="lrow"><div class="l-main">
+      <div class="l-title">No sworn statement loaded</div>
+      <div class="l-sub">Upload the master sworn statement (PDF or Excel) to Claude and current
+      pricing lands here — contract amount, paid to date, and balance per trade.</div>
+      </div></div></div>`));
+    return;
+  }
+  const card = $(`<div class="tablecard"></div>`);
+  const table = $(`<table><tr><th>Trade / contractor</th><th class="num">Contract</th><th class="num">Paid</th><th class="num">Balance</th></tr></table>`);
+  let tC = 0, tP = 0;
+  for (const [desc, contractor, contract, paid] of job.budget) {
+    tC += contract || 0; tP += paid || 0;
+    const bal = (contract || 0) - (paid || 0);
+    table.append($(`<tr><td>${esc(desc)}${contractor ? `<span class="sub">${esc(contractor)}</span>` : ""}</td>
+      <td class="num">${money(contract || 0)}</td>
+      <td class="num">${paid ? money(paid) : "—"}</td>
+      <td class="num"><span class="${bal < 0 ? "neg" : ""}">${money(bal)}</span></td></tr>`));
+  }
+  table.append($(`<tr><td><b>Total</b></td><td class="num"><b>${money(tC)}</b></td>
+    <td class="num"><b>${money(tP)}</b></td><td class="num"><b>${money(tC - tP)}</b></td></tr>`));
+  card.append(table);
+  root.append(card);
+  root.append($(`<div class="legend-note">Contract = current sworn amount including approved extras.
+    Balance = contract − paid to date. Update by giving Claude the latest sworn statement.</div>`));
+}
+
+function selectionsTab(root, job) {
+  root.append($(`<div class="eyebrow">Selections & allowances</div>`));
+  if (!job.selections.length) {
+    root.append($(`<div class="rowcard"><div class="lrow"><div class="l-main">
+      <div class="l-title">No selections tracked</div>
+      <div class="l-sub">Add a selections.md to this job's folder and refresh — allowances,
+      deadlines, and over/under land here.</div></div></div></div>`));
+    return;
+  }
+  const card = $(`<div class="rowcard"></div>`);
+  const rows = [...job.selections].sort((a, b) =>
+    (a[5] === "Pending" ? 0 : 1) - (b[5] === "Pending" ? 0 : 1) || a[4] - b[4]);
+  for (const [item, room, allowance, price, deadline, status] of rows) {
+    const daysLeft = deadline - job.currentDay;
+    let chip;
+    if (status !== "Pending") chip = `<span class="duechip done">decided</span>`;
+    else if (daysLeft < 0) chip = `<span class="duechip late">${-daysLeft}d late</span>`;
+    else if (daysLeft <= 14) chip = `<span class="duechip soon">due in ${daysLeft}d</span>`;
+    else chip = `<span class="duechip ok">wk ${Math.ceil(deadline/5)}</span>`;
+    const delta = price != null && allowance > 0 ? price - allowance : null;
+    const val = status === "Pending"
+      ? (allowance ? "allow. " + moneyK(allowance) : "no allowance")
+      : delta == null || delta === 0 ? "at allowance"
+      : `<span class="${delta > 0 ? "neg" : "pos"}">${delta > 0 ? "+" : ""}${money(delta)} vs allow.</span>`;
+    card.append($(`<div class="lrow"><div class="l-main"><div class="l-title">${esc(item)}</div>
+      <div class="l-sub">${esc(room)}</div></div>
+      <div class="l-side"><div class="l-val">${val}</div><div class="l-when">${chip}</div></div></div>`));
+  }
+  root.append(card);
+  root.append($(`<div class="legend-note">Deadlines are tied to schedule tasks and move when the
+    schedule shifts. Overages roll into the budget and next draw.</div>`));
+}
+
+function activityTab(root, job) {
+  if (job.changeOrders.length) {
+    root.append($(`<div class="eyebrow">Change orders</div>`));
+    const card = $(`<div class="rowcard"></div>`);
+    for (const [no, title, amt, status, date] of job.changeOrders) {
+      const chip = status === "Approved" ? `<span class="duechip ok">approved</span>`
+        : status === "Sent" ? `<span class="duechip soon">awaiting client</span>`
+        : `<span class="duechip done">${esc(status.toLowerCase())}</span>`;
+      card.append($(`<div class="lrow"><div class="l-main"><div class="l-title">${esc(no)} · ${esc(title)}</div>
+        <div class="l-sub">${esc(date)}</div></div>
+        <div class="l-side"><div class="l-val">${money(amt)}</div><div class="l-when">${chip}</div></div></div>`));
+    }
+    root.append(card);
+  }
+  root.append($(`<div class="eyebrow">Recent daily logs</div>`));
+  const card = $(`<div class="rowcard"></div>`);
+  for (const [date, note] of job.logs) {
+    card.append($(`<div class="lrow"><div class="l-main"><div class="l-title">${esc(date)}</div>
+      <div class="l-sub">${esc(note)}</div></div></div>`));
+  }
+  root.append(card);
+}
+
+/* ---------------- router ---------------- */
+function route() {
+  const h = location.hash || "#/";
+  const m = h.match(/^#\/job\/([^/]+)\/?([^/]*)/);
+  if (m) jobView(m[1], m[2] || "schedule");
+  else homeView();
+  window.scrollTo(0, 0);
+}
+addEventListener("hashchange", route);
+(async function boot() {
+  try {
+    const r = await fetch("api/jobs", { cache: "no-store" });
+    if (r.ok) {
+      const d = await r.json();
+      if (Array.isArray(d.jobs)) { JOBS = d.jobs; GENERATED = d.generated || GENERATED; SERVER = true; }
+    }
+  } catch (e) {}
+  if (SERVER) {
+    try { const r = await fetch("api/edits", { cache: "no-store" }); EDITS = r.ok ? await r.json() : {}; }
+    catch (e) { EDITS = {}; }
+  }
+  route();
+})();
+</script>
